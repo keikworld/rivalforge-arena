@@ -1,0 +1,313 @@
+<title>What Breaks, and Where</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#eef2f4; --surface:#fff; --raise:#f7fafb;
+  --ink:#12171a; --dim:#5a666d; --faint:#8b979e;
+  --line:#d8e2e6; --rule:#c3d1d7;
+  --accent:#2c6b8a; --accent-soft:#a9c8d8;
+  --ok:#22705a; --alert:#a8492a;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --display:"Archivo","IBM Plex Sans",-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e1214; --surface:#151b1e; --raise:#1a2226;
+    --ink:#e3eaed; --dim:#8fa0a8; --faint:#6d7d85;
+    --line:#232d33; --rule:#31404a;
+    --accent:#79b3d1; --accent-soft:#2f4d5f;
+    --ok:#57bd91; --alert:#df8b64;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1214; --surface:#151b1e; --raise:#1a2226;
+  --ink:#e3eaed; --dim:#8fa0a8; --faint:#6d7d85;
+  --line:#232d33; --rule:#31404a;
+  --accent:#79b3d1; --accent-soft:#2f4d5f;
+  --ok:#57bd91; --alert:#df8b64;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+main{max-width:940px;margin:0 auto;padding:clamp(28px,5vw,64px) clamp(18px,4vw,32px) 96px;
+  display:flex;flex-direction:column;gap:clamp(38px,5vw,60px)}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:clamp(36px,6.2vw,60px);font-weight:800;letter-spacing:-.03em;line-height:1.03}
+h2{font-size:clamp(20px,2.6vw,25px);font-weight:700;letter-spacing:-.015em;margin-bottom:6px}
+h3{font-size:16px;font-weight:700;letter-spacing:-.01em}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:16px}
+
+.masthead{display:flex;flex-direction:column;gap:14px;
+  border-bottom:2px solid var(--rule);padding-bottom:26px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent)}
+.lede{font-size:clamp(16px,2vw,18.5px);color:var(--dim);max-width:60ch}
+.stamp{font-family:var(--mono);font-size:12.5px;color:var(--faint)}
+
+.verdict{background:var(--surface);border:1px solid var(--line);
+  border-left:5px solid var(--ok);border-radius:3px;padding:26px 28px;gap:2px}
+.verdict.is-broken{border-left-color:var(--alert)}
+.verdict-n{font-family:var(--display);font-size:clamp(52px,9vw,84px);font-weight:800;
+  line-height:.92;letter-spacing:-.04em;color:var(--ok);font-variant-numeric:tabular-nums}
+.is-broken .verdict-n{color:var(--alert)}
+.verdict-t{font-family:var(--display);font-size:19px;font-weight:600;margin-top:6px}
+.verdict-s{color:var(--dim);font-size:15px;max-width:62ch}
+
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px}
+.fig{background:var(--surface);padding:16px 18px;display:flex;flex-direction:column;gap:2px}
+.fig-n{font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.fig-k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint)}
+
+.sub{color:var(--dim);font-size:15px;max-width:66ch}
+
+.stack{display:flex;height:14px;border-radius:2px;overflow:hidden;background:var(--line)}
+.seg{display:block;height:100%}
+.seg-ok{background:var(--accent)}
+.seg-mid{background:var(--accent-soft)}
+.seg-dim{background:var(--rule)}
+.key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:9px}
+.key-ok{background:var(--accent)}
+.key-mid{background:var(--accent-soft)}
+.key-dim{background:var(--rule)}
+
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);font-weight:500;text-align:left;padding:0 14px 8px 0;
+  border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:9px 14px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  white-space:nowrap;width:1%;padding-right:0}
+/* Two numeric columns side by side otherwise touch, and "198" next to
+   "34.1%" reads as one nonsense number. */
+td.num:not(:last-child),th.num:not(:last-child){padding-right:26px}
+td.dim{color:var(--dim)}
+tr:last-child td{border-bottom:none}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px}
+
+.chart{display:flex;flex-direction:column;gap:3px}
+.row{display:grid;grid-template-columns:34px 1fr 62px;align-items:center;gap:12px}
+.row-k{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right;
+  font-variant-numeric:tabular-nums}
+.row-k.wide{width:auto;text-align:left;font-family:var(--sans);font-size:13.5px;color:var(--ink)}
+.row{grid-template-columns:minmax(34px,150px) 1fr 62px}
+.row-bar{display:block;height:11px;background:var(--line);border-radius:2px;overflow:hidden}
+.row-bar>span{display:block;height:100%;background:var(--accent)}
+.row-v{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right;
+  font-variant-numeric:tabular-nums}
+
+.splits{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:20px}
+.split{display:flex;flex-direction:column;gap:1px;padding-left:16px;
+  border-left:3px solid var(--accent-soft)}
+.split-n{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;line-height:1.05}
+.split-k{font-size:14.5px;font-weight:500}
+.split-c{font-family:var(--mono);font-size:12px;color:var(--faint)}
+
+.phases{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.phase{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start;
+  padding:16px 0;border-bottom:1px solid var(--line)}
+.phase:last-child{border-bottom:none}
+.phase-n{font-family:var(--mono);font-size:13px;color:var(--accent);padding-top:2px;
+  font-variant-numeric:tabular-nums}
+.phase p{color:var(--dim);font-size:14.5px;margin-top:3px;max-width:64ch}
+.phase code{font-family:var(--mono);font-size:13px;background:var(--raise);
+  padding:1px 5px;border-radius:2px}
+.phase-id{font-family:var(--mono);font-size:11px;color:var(--faint);
+  letter-spacing:.06em;display:inline-block;margin-top:6px}
+
+.invariants{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:3px}
+.invariants li{background:var(--surface);padding:14px 16px;display:flex;gap:11px;
+  align-items:flex-start}
+.invariants strong{display:block;font-size:14px;font-weight:600;line-height:1.4}
+.invariants span:not(.chip){display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.chip{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 7px;border-radius:2px;white-space:nowrap;margin-top:2px}
+.chip-ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.chip-warn{background:color-mix(in srgb,var(--alert) 16%,transparent);color:var(--alert)}
+
+figure{margin:0;display:flex;flex-direction:column;gap:6px}
+figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint)}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.5;background:var(--surface);
+  border:1px solid var(--line);border-radius:3px;padding:14px 16px;margin:0;
+  overflow-x:auto;white-space:pre-wrap;word-break:break-word;color:var(--ink)}
+
+.notes{margin:0;padding-left:20px;color:var(--dim);font-size:14.5px;
+  display:flex;flex-direction:column;gap:4px}
+
+footer{border-top:2px solid var(--rule);padding-top:22px;display:flex;
+  flex-direction:column;gap:10px;color:var(--dim);font-size:14px}
+footer code{font-family:var(--mono);font-size:13px;background:var(--surface);
+  border:1px solid var(--line);padding:2px 7px;border-radius:2px;color:var(--ink)}
+.fine{font-size:13px;color:var(--faint);max-width:70ch}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<main>
+  <header class="masthead">
+    <p class="eyebrow">RivalForge &middot; simulation campaign</p>
+    <h1>What breaks, and where</h1>
+    <p class="lede">Thousands of independent simulations of the whole game —
+      logins, duels, half-finished duels, chain outages, forged buttons and
+      floods — with every message and every button inspected as it was
+      produced.</p>
+    <p class="stamp">2026-09-07 23:13:36 UTC &middot; sandbox only: no
+      network, no database, no real wallet</p>
+  </header>
+
+  <section class="verdict is-clean"><p class="verdict-n">0</p><p class="verdict-t">invariant violations</p><p class="verdict-s">across 2,000 independent simulations, 531,029 fights, 5,068,259 messages and 15,764,467 buttons</p></section>
+
+  <section class="figs"><div class="fig"><span class="fig-n">2,000</span><span class="fig-k">simulations</span></div><div class="fig"><span class="fig-n">531,029</span><span class="fig-k">fights</span></div><div class="fig"><span class="fig-n">6,120,662</span><span class="fig-k">updates handled</span></div><div class="fig"><span class="fig-n">5,068,259</span><span class="fig-k">messages checked</span></div><div class="fig"><span class="fig-n">15,764,467</span><span class="fig-k">buttons checked</span></div><div class="fig"><span class="fig-n">961s</span><span class="fig-k">wall clock</span></div></section>
+
+  <section>
+    <h2>The fight ledger</h2>
+    <p class="sub">Every duel is accounted for. Started equals finished plus
+      cut short plus still in play — a report where those do not reconcile is
+      a report that lost some.</p>
+    <div class="stack"><span class="seg seg-ok" style="width:34.267%" title="fought to a finish: 181,967"></span><span class="seg seg-mid" style="width:10.027%" title="cut short on purpose: 53,244"></span><span class="seg seg-dim" style="width:55.707%" title="still in play at the end: 295,818"></span></div>
+    <div class="scroll"><table class="ledger">
+      <thead><tr><th>531,029 fights</th><th class="num">count</th>
+      <th class="num">share</th></tr></thead>
+      <tbody><tr><td><span class="key key-ok"></span>fought to a finish</td><td class="num">181,967</td><td class="num dim">34.3%</td></tr><tr><td><span class="key key-mid"></span>cut short on purpose</td><td class="num">53,244</td><td class="num dim">10.0%</td></tr><tr><td><span class="key key-dim"></span>still in play at the end</td><td class="num">295,818</td><td class="num dim">55.7%</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>Who won</h2>
+    <p class="sub">Simulated players pick stances at random; the opponent is a
+      scripted agent that reads. The gap is the point — a random walk should
+      lose to a reader, and it does, by about the margin the balance harness
+      reports.</p>
+    <div class="splits"><div class="split"><span class="split-n">41.8%</span><span class="split-k">player won</span><span class="split-c">76,027 fights</span></div><div class="split"><span class="split-n">58.0%</span><span class="split-k">player lost</span><span class="split-c">105,487 fights</span></div><div class="split"><span class="split-n">0.2%</span><span class="split-k">draw at the round limit</span><span class="split-c">453 fights</span></div></div>
+  </section>
+
+  <section>
+    <h2>How long a duel lasts</h2>
+    <p class="sub">Rounds per finished fight, all 181,967 of them. Mean
+      11.23, range 2–30;
+      the ceiling is a hard 30-round limit that ends in a draw.</p>
+    <div class="chart"><div class="row"><span class="row-k">2</span><span class="row-bar"><span style="width:0.40%"></span></span><span class="row-v">32</span></div><div class="row"><span class="row-k">3</span><span class="row-bar"><span style="width:5.11%"></span></span><span class="row-v">1,027</span></div><div class="row"><span class="row-k">4</span><span class="row-bar"><span style="width:26.34%"></span></span><span class="row-v">5,291</span></div><div class="row"><span class="row-k">5</span><span class="row-bar"><span style="width:65.69%"></span></span><span class="row-v">13,197</span></div><div class="row"><span class="row-k">6</span><span class="row-bar"><span style="width:100.00%"></span></span><span class="row-v">20,091</span></div><div class="row"><span class="row-k">7</span><span class="row-bar"><span style="width:98.88%"></span></span><span class="row-v">19,865</span></div><div class="row"><span class="row-k">8</span><span class="row-bar"><span style="width:93.45%"></span></span><span class="row-v">18,776</span></div><div class="row"><span class="row-k">9</span><span class="row-bar"><span style="width:75.40%"></span></span><span class="row-v">15,149</span></div><div class="row"><span class="row-k">10</span><span class="row-bar"><span style="width:70.68%"></span></span><span class="row-v">14,200</span></div><div class="row"><span class="row-k">11</span><span class="row-bar"><span style="width:60.29%"></span></span><span class="row-v">12,113</span></div><div class="row"><span class="row-k">12</span><span class="row-bar"><span style="width:44.01%"></span></span><span class="row-v">8,843</span></div><div class="row"><span class="row-k">13</span><span class="row-bar"><span style="width:38.95%"></span></span><span class="row-v">7,825</span></div><div class="row"><span class="row-k">14</span><span class="row-bar"><span style="width:33.79%"></span></span><span class="row-v">6,788</span></div><div class="row"><span class="row-k">15</span><span class="row-bar"><span style="width:25.67%"></span></span><span class="row-v">5,158</span></div><div class="row"><span class="row-k">16</span><span class="row-bar"><span style="width:22.07%"></span></span><span class="row-v">4,435</span></div><div class="row"><span class="row-k">17</span><span class="row-bar"><span style="width:18.81%"></span></span><span class="row-v">3,780</span></div><div class="row"><span class="row-k">18</span><span class="row-bar"><span style="width:14.88%"></span></span><span class="row-v">2,989</span></div><div class="row"><span class="row-k">19</span><span class="row-bar"><span style="width:13.23%"></span></span><span class="row-v">2,658</span></div><div class="row"><span class="row-k">20</span><span class="row-bar"><span style="width:11.43%"></span></span><span class="row-v">2,296</span></div><div class="row"><span class="row-k">21</span><span class="row-bar"><span style="width:9.03%"></span></span><span class="row-v">1,814</span></div><div class="row"><span class="row-k">22</span><span class="row-bar"><span style="width:7.94%"></span></span><span class="row-v">1,596</span></div><div class="row"><span class="row-k">23</span><span class="row-bar"><span style="width:7.03%"></span></span><span class="row-v">1,413</span></div><div class="row"><span class="row-k">24</span><span class="row-bar"><span style="width:5.23%"></span></span><span class="row-v">1,051</span></div><div class="row"><span class="row-k">25</span><span class="row-bar"><span style="width:4.93%"></span></span><span class="row-v">991</span></div><div class="row"><span class="row-k">26</span><span class="row-bar"><span style="width:4.76%"></span></span><span class="row-v">957</span></div><div class="row"><span class="row-k">27</span><span class="row-bar"><span style="width:3.64%"></span></span><span class="row-v">732</span></div><div class="row"><span class="row-k">28</span><span class="row-bar"><span style="width:3.30%"></span></span><span class="row-v">664</span></div><div class="row"><span class="row-k">29</span><span class="row-bar"><span style="width:3.42%"></span></span><span class="row-v">687</span></div><div class="row"><span class="row-k">30</span><span class="row-bar"><span style="width:37.57%"></span></span><span class="row-v">7,549</span></div></div>
+  </section>
+
+  <section>
+    <h2>The seven phases</h2>
+    <p class="sub">Each run walks these in order. They are numbered because a
+      run really is a sequence — later phases inherit the state earlier ones
+      left behind, which is where the interesting failures live.</p>
+    <ol class="phases"><li class="phase"><span class="phase-n">1</span><div><h3>The happy path</h3><p>Start, connect a wallet by signing a real challenge, read the roster, pick a fighter, fight it out, check who you are, log out.</p><span class="phase-id">lifecycle</span></div></li><li class="phase"><span class="phase-n">2</span><div><h3>Half-cut fights</h3><p>Nine ways a duel ends without ending: forfeit, disconnect, session expiry, conversation eviction, the NFT sold mid-fight, a second <code>/play</code>, a stance after the last round, a bot restart, and simply not replying again.</p><span class="phase-id">interrupted</span></div></li><li class="phase"><span class="phase-n">3</span><div><h3>Hostile input</h3><p>Buttons signed for someone else, forged and truncated payloads, wallet flows attempted in a group, a wrong signature, a replayed one, another wallet's signature, ten malformed update shapes, and a flood.</p><span class="phase-id">abuse</span></div></li><li class="phase"><span class="phase-n">4</span><div><h3>The chain goes down</h3><p>The indexer stops answering mid-session, then recovers. Reading a roster must degrade; granting a fighter must refuse.</p><span class="phase-id">outage</span></div></li><li class="phase"><span class="phase-n">5</span><div><h3>Everyone at once</h3><p>Every player opens a fight before any of them advances, then all of them go round by round. Each match's seed and arena are fingerprinted first and checked after.</p><span class="phase-id">simultaneous</span></div></li><li class="phase"><span class="phase-n">6</span><div><h3>Real threads</h3><p>Whole sessions run in parallel against the shared conversation store, rate limiter, challenge store and session store.</p><span class="phase-id">concurrency</span></div></li><li class="phase"><span class="phase-n">7</span><div><h3>Random walk</h3><p>A long weighted walk over every command, including buttons for matches that no longer exist and text that is an attack.</p><span class="phase-id">soak</span></div></li></ol>
+  </section>
+
+  <section>
+    <h2>Half-cut fights</h2>
+    <p class="sub">A duel that ends properly is the easy case. Each of these
+      leaves state somewhere the happy path never does — and after every one,
+      the simulation checks the only thing that matters to a player: can they
+      start again?</p>
+    <div class="scroll"><table>
+      <thead><tr><th>interruption</th><th class="num">times survived</th></tr></thead>
+      <tbody><tr><td>forfeit mid-fight</td><td class='num'>5,916</td></tr><tr><td>disconnect mid-fight</td><td class='num'>5,916</td></tr><tr><td>session expires mid-fight</td><td class='num'>5,916</td></tr><tr><td>conversation evicted mid-fight</td><td class='num'>5,916</td></tr><tr><td>NFT sold mid-fight</td><td class='num'>5,916</td></tr><tr><td>second /play mid-fight</td><td class='num'>5,916</td></tr><tr><td>stance after the match ended</td><td class='num'>5,916</td></tr><tr><td>bot restarted mid-fight</td><td class='num'>5,916</td></tr><tr><td>wandered off mid-fight</td><td class='num'>5,916</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>What was thrown at it</h2>
+    <p class="sub">Every one of these was rejected. None of them moved a match,
+      reached another player, or stopped the bot.</p>
+    <div class="two">
+      <div class="scroll"><table>
+        <thead><tr><th>attack</th><th class="num">times</th></tr></thead>
+        <tbody><tr><td>flood dropped</td><td class='num'>390,000</td></tr><tr><td>bad callback rejected</td><td class='num'>14,000</td></tr><tr><td>stolen button rejected</td><td class='num'>2,000</td></tr><tr><td>malformed update absorbed</td><td class='num'>20,000</td></tr><tr><td>group wallet flow refused</td><td class='num'>6,000</td></tr><tr><td>login rejected</td><td class='num'>15,289</td></tr><tr><td>wrong signature rejected</td><td class='num'>2,000</td></tr><tr><td>replayed signature rejected</td><td class='num'>2,000</td></tr><tr><td>wrong-key signature rejected</td><td class='num'>2,000</td></tr><tr><td>fighter pick refused</td><td class='num'>32,048</td></tr></tbody></table></div>
+      <div class="scroll"><table>
+        <thead><tr><th>degraded, did not deny</th><th class="num">times</th></tr></thead>
+        <tbody><tr><td>roster unavailable (outage, not a denial)</td><td class='num'>54,698</td></tr><tr><td>degraded gracefully during outage</td><td class='num'>33,396</td></tr><tr><td>roster refused without a session</td><td class='num'>83,274</td></tr><tr><td>roster shown (wallet is empty)</td><td class='num'>61,757</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What was checked, after every action</h2>
+    <p class="sub">Not at the end. A violation's cause is the action
+      immediately before it, and a report that says "somewhere in a million
+      messages" is one nobody can act on.</p>
+    <ul class="invariants"><li><span class="chip chip-ok">held</span><div><strong>A session token never reaches a message</strong><span>it is a bearer credential</span></div></li><li><span class="chip chip-ok">held</span><div><strong>A wallet appears only in its owner&#x27;s chat</strong><span>the address is not a secret and the challenge must contain it — the leak to look for is it turning up in someone else&#x27;s chat</span></div></li><li><span class="chip chip-ok">held</span><div><strong>Every message fits Telegram&#x27;s 4,096-character limit</strong><span>over it, the API drops it silently</span></div></li><li><span class="chip chip-ok">held</span><div><strong>Every fenced block is balanced</strong><span>an unbalanced one lets attacker text become markup</span></div></li><li><span class="chip chip-ok">held</span><div><strong>No unescaped backtick survives inside a block</strong><span>one closes the block early</span></div></li><li><span class="chip chip-ok">held</span><div><strong>No foreign text renders as a clickable link</strong><span>that is a phishing page with our name on it</span></div></li><li><span class="chip chip-ok">held</span><div><strong>Every button fits 64 bytes</strong><span>over it, Telegram drops the button at send time</span></div></li><li><span class="chip chip-ok">held</span><div><strong>Every button verifies for the chat it was sent to</strong><span>a stolen button must do nothing</span></div></li><li><span class="chip chip-ok">held</span><div><strong>Concurrent matches never swap state</strong><span>seed and arena fingerprinted before and after</span></div></li><li><span class="chip chip-ok">held</span><div><strong>The rendered outcome matches the engine&#x27;s verdict</strong><span>the message must not lie about who won</span></div></li><li><span class="chip chip-ok">held</span><div><strong>The conversation store stays bounded</strong><span>otherwise memory is the attack</span></div></li><li><span class="chip chip-ok">held</span><div><strong>handle() never raises</strong><span>a bot that dies on one update is one anyone can stop</span></div></li></ul>
+  </section>
+
+  <section>
+    <h2>Where the fights happened</h2>
+    <p class="sub">Arenas are drawn at random per match, so an even spread is
+      the expected result — an uneven one would mean the draw is biased.</p>
+    <div class="chart"><div class="row"><span class="row-k wide">Blazing Rift</span><span class="row-bar"><span style="width:100.00%"></span></span><span class="row-v">17.1%</span></div><div class="row"><span class="row-k wide">Tenebris Abyss</span><span class="row-bar"><span style="width:99.49%"></span></span><span class="row-v">17.1%</span></div><div class="row"><span class="row-k wide">Whisperwind Arena</span><span class="row-bar"><span style="width:97.10%"></span></span><span class="row-v">16.6%</span></div><div class="row"><span class="row-k wide">Aurora Sanctum</span><span class="row-bar"><span style="width:96.08%"></span></span><span class="row-v">16.5%</span></div><div class="row"><span class="row-k wide">Chronos Cradle</span><span class="row-bar"><span style="width:95.86%"></span></span><span class="row-v">16.4%</span></div><div class="row"><span class="row-k wide">Tide of Trials</span><span class="row-bar"><span style="width:94.81%"></span></span><span class="row-v">16.3%</span></div></div>
+  </section>
+
+  <section>
+    <h2>The audit trail</h2>
+    <p class="sub">What the game recorded while all of this happened. No IP
+      address, no user agent, no device fingerprint, no geolocation — a wallet,
+      an event, an outcome and a timestamp.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>event</th><th class="num">records</th></tr></thead>
+      <tbody><tr><td>challenge_issued</td><td class='num'>302,224</td></tr><tr><td>auth_succeeded</td><td class='num'>284,935</td></tr><tr><td>session_revoked</td><td class='num'>148,077</td></tr><tr><td>ownership_verified</td><td class='num'>70,619</td></tr><tr><td>auth_failed</td><td class='num'>17,289</td></tr><tr><td>ownership_unavailable</td><td class='num'>6,096</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>What a player actually saw</h2>
+    <p class="sub">Taken verbatim from the simulation. NFT names in these runs
+      include tokens named after phishing links, right-to-left overrides and
+      five thousand identical characters — a quarter of every wallet is
+      hostile by construction.</p>
+    <figure><figcaption>roster</figcaption><pre>```
+Your fighters:
+
+ 1. Void Band #3490  KL/shadow  PWR 12  GRD 6  FOC 12  (2E7F...cfth)
+
+Tap one to make it your fighter.
+```</pre></figure><figure><figcaption>finished fight</figcaption><pre>```
+
+-- round 6 --
+  Void Band #3490 [] guard
+  Rival &gt;&gt; strike
+  Rival takes 12.  The Herald jeers: &#x27;Keik batter’s beaten flat!&#x27;
+  Void Band #3490 takes 12.  Smashed ya like a cream-filled cupcake!
+  Void Band #3490 goes down.
+==============================================
+  Rival wins in 6 rounds (knockout).
+  Down, but the tundra is patient.
+==============================================
+```</pre></figure><figure><figcaption>connected</figcaption><pre>```
+Connected: CyiW...QTe6
+
+I can read which NFTs you hold. I cannot move them,
+and I never will be able to -- there is no code in me
+that builds a transaction.
+
+/roster to pick a fighter.
+```</pre></figure>
+  </section>
+
+  <section>
+    <h2>Notes from the runs</h2>
+    <ul class="notes"><li>flood: 5 of 200 served, 195 dropped in silence  (x2000)</li><li>after recovery, 20/20 rosters answered again (an empty wallet counts: it is an answer, not an outage)  (x776)</li><li>20 fights opened before any of them advanced  (x372)</li><li>12 fights opened before any of them advanced  (x362)</li><li>70 fights opened before any of them advanced  (x330)</li><li>45 fights opened before any of them advanced  (x320)</li><li>8 fights opened before any of them advanced  (x309)</li><li>30 fights opened before any of them advanced  (x307)</li></ul>
+  </section>
+
+  
+
+  <footer>
+    <p><strong>Reproduce it:</strong>
+      <code>python tools/simulate.py --runs 2,000</code>. Exit code is 1 if
+      any invariant breaks, so it works as a gate; a miniature version runs on
+      every commit.</p>
+    <p class="fine">The sandbox lives outside the installed package, so no
+      deployment can import it. Wallets are real ed25519 keypairs generated in
+      memory and discarded — a fake signature would only exercise a fake
+      verifier.</p>
+  </footer>
+</main>

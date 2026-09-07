@@ -1130,7 +1130,7 @@ def summarise(sim: Simulation, players: list[Player], elapsed: float) -> dict[st
             "conversations_tracked": len(sim.sandbox.states),
             "conversation_limit": sim.sandbox.states._max_users,  # noqa: SLF001
         },
-        "phase_timing": {k: round(v, 2) for k, v in metrics.phase_timing.items()},
+        "phase_timing": dict(metrics.phase_timing),
         "notes": metrics.notes,
         "examples": {k: v for k, v in metrics.examples.items()},
         "violations": [v.as_dict() for v in sim.guard.violations],

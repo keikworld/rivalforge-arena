@@ -1,0 +1,137 @@
+<title>RivalForge Simulation Report</title>
+<style>
+:root{--bg:#faf9f7;--fg:#1c1b19;--dim:#6b6862;--line:#e2ded8;--card:#fff;
+--ok:#1f7a4d;--bad:#b3261e;--warn:#8a6d1f;--accent:#33566e;}
+@media (prefers-color-scheme:dark){:root{--bg:#16181a;--fg:#e8e6e3;--dim:#9a958d;
+--line:#2c2f33;--card:#1d2023;--ok:#59c08b;--bad:#f2837a;--warn:#d9b45a;--accent:#8fb6d1;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:28px;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:19px;margin:38px 0 12px;letter-spacing:-.01em}
+h3{font-size:15px;margin:22px 0 8px;color:var(--dim);text-transform:uppercase;
+letter-spacing:.08em;font-weight:600}
+.sub{color:var(--dim);margin:0 0 24px}
+.banner{padding:14px 18px;border-radius:10px;font-weight:600;margin:0 0 28px}
+.banner.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);
+border:1px solid color-mix(in srgb,var(--ok) 35%,transparent)}
+.banner.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad);
+border:1px solid color-mix(in srgb,var(--bad) 35%,transparent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card .n{font-size:24px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.card .k{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+margin-top:2px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--line);
+vertical-align:top}
+th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;
+letter-spacing:.06em}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
+padding-right:18px;width:1%}
+.bar{display:block;height:7px;border-radius:4px;background:var(--accent);min-width:2px}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+overflow-x:auto;font-size:12.5px;line-height:1.45;margin:8px 0 0}
+.note{color:var(--dim);font-size:14px;margin:4px 0}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);
+color:var(--dim);font-size:13px}
+</style>
+<div class="wrap">
+<h1>RivalForge simulation report</h1>
+<p class="sub">2026-09-07 23:13:36 UTC &middot; sandbox only: no network,
+no database, no real wallet.</p>
+<div class="banner ok">No invariant violations. Every message, button, login, fight and interruption below behaved as specified.</div>
+<div class="grid"><div class="card"><div class="n">2,000</div><div class="k">simulation runs</div></div><div class="card"><div class="n">6,120,662</div><div class="k">updates handled</div></div><div class="card"><div class="n">531,029</div><div class="k">fights started</div></div><div class="card"><div class="n">181,967</div><div class="k">fights finished</div></div><div class="card"><div class="n">5,068,259</div><div class="k">messages checked</div></div><div class="card"><div class="n">15,764,467</div><div class="k">buttons checked</div></div><div class="card"><div class="n">961.21s</div><div class="k">elapsed</div></div></div>
+
+<h2>Fights</h2>
+<div class="grid"><div class="card"><div class="n">531,029</div><div class="k">started</div></div><div class="card"><div class="n">181,967</div><div class="k">finished</div></div><div class="card"><div class="n">53,244</div><div class="k">abandoned</div></div><div class="card"><div class="n">11.23</div><div class="k">mean rounds</div></div><div class="card"><div class="n">2</div><div class="k">shortest</div></div><div class="card"><div class="n">30</div><div class="k">longest</div></div></div>
+<div class="scroll"><table><thead><tr><th>what</th><th class="n">count</th><th></th></tr></thead><tbody><tr><td>player won</td><td class='n'>76,027</td><td><span class="bar" style="width:72%"></span></td></tr><tr><td>player lost</td><td class='n'>105,487</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>draw at the round limit</td><td class='n'>453</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>abandoned mid-fight</td><td class='n'>53,244</td><td><span class="bar" style="width:50%"></span></td></tr></tbody></table></div>
+
+<h3>Rounds per fight</h3>
+<div class="scroll"><table><thead><tr><th>length</th><th class="n">fights</th><th></th></tr></thead><tbody><tr><td>2 rounds</td><td class='n'>32</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>3 rounds</td><td class='n'>1,027</td><td><span class="bar" style="width:5%"></span></td></tr><tr><td>4 rounds</td><td class='n'>5,291</td><td><span class="bar" style="width:26%"></span></td></tr><tr><td>5 rounds</td><td class='n'>13,197</td><td><span class="bar" style="width:66%"></span></td></tr><tr><td>6 rounds</td><td class='n'>20,091</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>7 rounds</td><td class='n'>19,865</td><td><span class="bar" style="width:99%"></span></td></tr><tr><td>8 rounds</td><td class='n'>18,776</td><td><span class="bar" style="width:93%"></span></td></tr><tr><td>9 rounds</td><td class='n'>15,149</td><td><span class="bar" style="width:75%"></span></td></tr><tr><td>10 rounds</td><td class='n'>14,200</td><td><span class="bar" style="width:71%"></span></td></tr><tr><td>11 rounds</td><td class='n'>12,113</td><td><span class="bar" style="width:60%"></span></td></tr><tr><td>12 rounds</td><td class='n'>8,843</td><td><span class="bar" style="width:44%"></span></td></tr><tr><td>13 rounds</td><td class='n'>7,825</td><td><span class="bar" style="width:39%"></span></td></tr><tr><td>14 rounds</td><td class='n'>6,788</td><td><span class="bar" style="width:34%"></span></td></tr><tr><td>15 rounds</td><td class='n'>5,158</td><td><span class="bar" style="width:26%"></span></td></tr><tr><td>16 rounds</td><td class='n'>4,435</td><td><span class="bar" style="width:22%"></span></td></tr><tr><td>17 rounds</td><td class='n'>3,780</td><td><span class="bar" style="width:19%"></span></td></tr><tr><td>18 rounds</td><td class='n'>2,989</td><td><span class="bar" style="width:15%"></span></td></tr><tr><td>19 rounds</td><td class='n'>2,658</td><td><span class="bar" style="width:13%"></span></td></tr><tr><td>20 rounds</td><td class='n'>2,296</td><td><span class="bar" style="width:11%"></span></td></tr><tr><td>21 rounds</td><td class='n'>1,814</td><td><span class="bar" style="width:9%"></span></td></tr><tr><td>22 rounds</td><td class='n'>1,596</td><td><span class="bar" style="width:8%"></span></td></tr><tr><td>23 rounds</td><td class='n'>1,413</td><td><span class="bar" style="width:7%"></span></td></tr><tr><td>24 rounds</td><td class='n'>1,051</td><td><span class="bar" style="width:5%"></span></td></tr><tr><td>25 rounds</td><td class='n'>991</td><td><span class="bar" style="width:5%"></span></td></tr><tr><td>26 rounds</td><td class='n'>957</td><td><span class="bar" style="width:5%"></span></td></tr><tr><td>27 rounds</td><td class='n'>732</td><td><span class="bar" style="width:4%"></span></td></tr><tr><td>28 rounds</td><td class='n'>664</td><td><span class="bar" style="width:3%"></span></td></tr><tr><td>29 rounds</td><td class='n'>687</td><td><span class="bar" style="width:3%"></span></td></tr><tr><td>30 rounds</td><td class='n'>7,549</td><td><span class="bar" style="width:38%"></span></td></tr></tbody></table></div>
+
+<h3>By arena</h3>
+<div class="scroll"><table><thead><tr><th>arena</th><th class="n">fights</th><th></th></tr></thead><tbody><tr><td>Blazing Rift</td><td class='n'>31,194</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>Tenebris Abyss</td><td class='n'>31,034</td><td><span class="bar" style="width:99%"></span></td></tr><tr><td>Whisperwind Arena</td><td class='n'>30,289</td><td><span class="bar" style="width:97%"></span></td></tr><tr><td>Aurora Sanctum</td><td class='n'>29,971</td><td><span class="bar" style="width:96%"></span></td></tr><tr><td>Chronos Cradle</td><td class='n'>29,904</td><td><span class="bar" style="width:96%"></span></td></tr><tr><td>Tide of Trials</td><td class='n'>29,575</td><td><span class="bar" style="width:95%"></span></td></tr></tbody></table></div>
+
+<h2>What happened</h2>
+<div class="scroll"><table><thead><tr><th>outcome</th><th class="n">times</th><th></th></tr></thead><tbody><tr><td>fight started</td><td class='n'>531,029</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>flood dropped</td><td class='n'>390,000</td><td><span class="bar" style="width:73%"></span></td></tr><tr><td>login succeeded</td><td class='n'>282,935</td><td><span class="bar" style="width:53%"></span></td></tr><tr><td>logged out</td><td class='n'>196,601</td><td><span class="bar" style="width:37%"></span></td></tr><tr><td>roster shown</td><td class='n'>106,469</td><td><span class="bar" style="width:20%"></span></td></tr><tr><td>player lost</td><td class='n'>105,487</td><td><span class="bar" style="width:20%"></span></td></tr><tr><td>roster refused without a session</td><td class='n'>83,274</td><td><span class="bar" style="width:16%"></span></td></tr><tr><td>player won</td><td class='n'>76,027</td><td><span class="bar" style="width:14%"></span></td></tr><tr><td>roster shown (wallet is empty)</td><td class='n'>61,757</td><td><span class="bar" style="width:12%"></span></td></tr><tr><td>roster unavailable (outage, not a denial)</td><td class='n'>54,698</td><td><span class="bar" style="width:10%"></span></td></tr><tr><td>fighter chosen</td><td class='n'>34,499</td><td><span class="bar" style="width:6%"></span></td></tr><tr><td>degraded gracefully during outage</td><td class='n'>33,396</td><td><span class="bar" style="width:6%"></span></td></tr><tr><td>fighter pick refused</td><td class='n'>32,048</td><td><span class="bar" style="width:6%"></span></td></tr><tr><td>malformed update absorbed</td><td class='n'>20,000</td><td><span class="bar" style="width:4%"></span></td></tr><tr><td>login rejected</td><td class='n'>15,289</td><td><span class="bar" style="width:3%"></span></td></tr><tr><td>bad callback rejected</td><td class='n'>14,000</td><td><span class="bar" style="width:3%"></span></td></tr><tr><td>group wallet flow refused</td><td class='n'>6,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: forfeit mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: disconnect mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: session expires mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: conversation evicted mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: NFT sold mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: second /play mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: stance after the match ended</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: bot restarted mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>survived: wandered off mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>stolen button rejected</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>wrong signature rejected</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>replayed signature rejected</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>wrong-key signature rejected</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>draw</td><td class='n'>453</td><td><span class="bar" style="width:2%"></span></td></tr></tbody></table></div>
+
+<h2>What was sent</h2>
+<div class="scroll"><table><thead><tr><th>action</th><th class="n">times</th><th></th></tr></thead><tbody><tr><td>stance:focus</td><td class='n'>1,209,377</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>stance:guard</td><td class='n'>1,208,676</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>stance:strike</td><td class='n'>1,208,034</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>/play</td><td class='n'>531,029</td><td><span class="bar" style="width:44%"></span></td></tr><tr><td>/roster</td><td class='n'>306,198</td><td><span class="bar" style="width:25%"></span></td></tr><tr><td>/connect</td><td class='n'>302,224</td><td><span class="bar" style="width:25%"></span></td></tr><tr><td>/signed</td><td class='n'>300,224</td><td><span class="bar" style="width:25%"></span></td></tr><tr><td>arm soul</td><td class='n'>283,226</td><td><span class="bar" style="width:23%"></span></td></tr><tr><td>/disconnect</td><td class='n'>196,601</td><td><span class="bar" style="width:16%"></span></td></tr><tr><td>/start</td><td class='n'>110,314</td><td><span class="bar" style="width:9%"></span></td></tr><tr><td>/whoami</td><td class='n'>104,508</td><td><span class="bar" style="width:9%"></span></td></tr><tr><td>/help</td><td class='n'>90,049</td><td><span class="bar" style="width:7%"></span></td></tr><tr><td>pick fighter</td><td class='n'>66,547</td><td><span class="bar" style="width:6%"></span></td></tr><tr><td>forfeit</td><td class='n'>63,611</td><td><span class="bar" style="width:5%"></span></td></tr><tr><td>/play (recover)</td><td class='n'>53,244</td><td><span class="bar" style="width:4%"></span></td></tr><tr><td>garbage text</td><td class='n'>28,968</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>group chat wallet flow</td><td class='n'>6,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>/play after selling</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>/play mid-fight</td><td class='n'>5,916</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>stolen button</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>bad callback: forged signature</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>bad callback: missing signature</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>bad callback: empty</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>bad callback: oversized</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>bad callback: wrong separator count</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>bad callback: unknown action</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>bad callback: nonsense</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>/signed (replay)</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>/signed (wrong key)</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: not a mapping</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: empty</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: no sender</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: from another bot</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: no text</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: absurd text</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: negative user id</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: float user id</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: unknown command</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr><tr><td>malformed: command with bot name</td><td class='n'>2,000</td><td><span class="bar" style="width:2%"></span></td></tr></tbody></table></div>
+
+<h2>The chain</h2>
+<div class="scroll"><table><thead><tr><th>call</th><th class="n">count</th><th></th></tr></thead><tbody><tr><td>ownership_checks</td><td class='n'>76,715</td><td><span class="bar" style="width:34%"></span></td></tr><tr><td>roster_reads</td><td class='n'>222,924</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>outages_served</td><td class='n'>60,794</td><td><span class="bar" style="width:27%"></span></td></tr></tbody></table></div>
+
+<h2>Audit trail</h2>
+<div class="scroll"><table><thead><tr><th>event</th><th class="n">records</th><th></th></tr></thead><tbody><tr><td>challenge_issued</td><td class='n'>302,224</td><td><span class="bar" style="width:100%"></span></td></tr><tr><td>auth_succeeded</td><td class='n'>284,935</td><td><span class="bar" style="width:94%"></span></td></tr><tr><td>session_revoked</td><td class='n'>148,077</td><td><span class="bar" style="width:49%"></span></td></tr><tr><td>ownership_verified</td><td class='n'>70,619</td><td><span class="bar" style="width:23%"></span></td></tr><tr><td>auth_failed</td><td class='n'>17,289</td><td><span class="bar" style="width:6%"></span></td></tr><tr><td>ownership_unavailable</td><td class='n'>6,096</td><td><span class="bar" style="width:2%"></span></td></tr></tbody></table></div>
+
+<h2>Across runs</h2><div class="scroll"><table><thead><tr><th>measure</th><th class="n">value</th><th></th></tr></thead><tbody><tr><td>runs</td><td class='n'>2,000</td><td></td></tr><tr><td>runs with no violation</td><td class='n'>2,000</td><td></td></tr><tr><td>runs with a violation</td><td class='n'>0</td><td></td></tr><tr><td>fights per run (mean)</td><td class='n'>265.5</td><td></td></tr><tr><td>player win rate</td><td class='n'>41.8%</td><td></td></tr><tr><td>player loss rate</td><td class='n'>58.0%</td><td></td></tr><tr><td>draw rate</td><td class='n'>0.2%</td><td></td></tr></tbody></table></div>
+
+<h2>Errors</h2>
+<p class="note">nothing recorded</p>
+
+<h2>Notes</h2>
+<p class="note">flood: 5 of 200 served, 195 dropped in silence  (x2000)</p><p class="note">after recovery, 20/20 rosters answered again (an empty wallet counts: it is an answer, not an outage)  (x776)</p><p class="note">20 fights opened before any of them advanced  (x372)</p><p class="note">12 fights opened before any of them advanced  (x362)</p><p class="note">70 fights opened before any of them advanced  (x330)</p><p class="note">45 fights opened before any of them advanced  (x320)</p><p class="note">8 fights opened before any of them advanced  (x309)</p><p class="note">30 fights opened before any of them advanced  (x307)</p><p class="note">8 threads x ~1 players concurrently; 0 errors  (x235)</p><p class="note">after recovery, 8/8 rosters answered again (an empty wallet counts: it is an answer, not an outage)  (x176)</p><p class="note">after recovery, 12/12 rosters answered again (an empty wallet counts: it is an answer, not an outage)  (x172)</p><p class="note">4 threads x ~5 players concurrently; 0 errors  (x131)</p><p class="note">8 threads x ~2 players concurrently; 0 errors  (x129)</p><p class="note">2 threads x ~6 players concurrently; 0 errors  (x126)</p><p class="note">8 threads x ~5 players concurrently; 0 errors  (x118)</p><p class="note">2 threads x ~35 players concurrently; 0 errors  (x113)</p><p class="note">2 threads x ~10 players concurrently; 0 errors  (x112)</p><p class="note">8 threads x ~8 players concurrently; 0 errors  (x111)</p><p class="note">4 threads x ~2 players concurrently; 0 errors  (x111)</p><p class="note">4 threads x ~7 players concurrently; 0 errors  (x108)</p><p class="note">4 threads x ~11 players concurrently; 0 errors  (x108)</p><p class="note">4 threads x ~3 players concurrently; 0 errors  (x107)</p><p class="note">4 threads x ~17 players concurrently; 0 errors  (x106)</p><p class="note">2 threads x ~15 players concurrently; 0 errors  (x104)</p><p class="note">after recovery, 14/20 rosters answered again (an empty wallet counts: it is an answer, not an outage)  (x103)</p>
+
+<h2>Examples</h2>
+<h3>connected</h3><pre>```
+Connected: CyiW...QTe6
+
+I can read which NFTs you hold. I cannot move them,
+and I never will be able to -- there is no code in me
+that builds a transaction.
+
+/roster to pick a fighter.
+```</pre><pre>```
+Connected: 891r...QAjq
+
+I can read which NFTs you hold. I cannot move them,
+and I never will be able to -- there is no code in me
+that builds a transaction.
+
+/roster to pick a fighter.
+```</pre><h3>roster</h3><pre>```
+Your fighters:
+
+ 1. Void Band #3490  KL/shadow  PWR 12  GRD 6  FOC 12  (2E7F...cfth)
+
+Tap one to make it your fighter.
+```</pre><pre>```
+Your fighters:
+
+ 1. Solstice Ape #4496  FW/shadow  PWR 5  GRD 17  FOC 8  (GmHy...ZUt5)
+
+Tap one to make it your fighter.
+```</pre><h3>finished fight</h3><pre>```
+
+-- round 6 --
+  Void Band #3490 [] guard
+  Rival &gt;&gt; strike
+  Rival takes 12.  The Herald jeers: &#x27;Keik batter’s beaten flat!&#x27;
+  Void Band #3490 takes 12.  Smashed ya like a cream-filled cupcake!
+  Void Band #3490 goes down.
+==============================================
+  Rival wins in 6 rounds (knockout).
+  Down, but the tundra is patient.
+==============================================
+```</pre><pre>```
+
+-- round 5 --
+  Recruit [] guard
+  Rival &gt;&gt; strike
+  Rival takes 20.  Smashed ya like a cream-filled cupcake!
+  Recruit takes 9.  Iced you like a frozen lake!
+  Recruit goes down.
+==============================================
+  Rival wins in 5 rounds (knockout).
+  The Herald mutters: &#x27;Sharpen the ice, warrior.&#x27;
+==============================================
+```</pre><h3>login rejected</h3><pre>That signature did not check out\. Run /connect again\.</pre>
+
+
+
+<footer>Generated by <code>tools/simulate.py</code>. The sandbox lives outside the
+installed package so no deployment can import it.</footer>
+</div>

@@ -115,3 +115,37 @@ the product:
 The lesson each time: state that is correct for one actor is wrong for two.
 Which is precisely what the simulation exists to find — it just found it here
 first.
+
+## The campaign that has been run
+
+2,000 independent simulations, September 2026. `sim-results/campaign.json` holds
+the full record and `sim-results/report.html` the readable version.
+
+| | |
+|---|---|
+| simulations | 2,000 |
+| simulated players | 60,966 |
+| updates handled | 6,120,662 |
+| messages inspected | 5,068,259 |
+| buttons inspected | 15,764,467 |
+| fights started | 531,029 |
+| fought to a finish | 181,967 |
+| cut short deliberately | 53,244 |
+| peak simultaneous fights | 70 |
+| wall clock | 961s |
+| **invariant violations** | **0** |
+| **unhandled errors** | **0** |
+
+Fights ran a mean of 11.2 rounds (range 2–30, the 30 being the draw limit).
+Simulated players choose stances at random and lost 58.0% against the scripted
+agents that read — the same direction and roughly the same margin the balance
+harness reports, which is the cross-check that the two harnesses agree.
+
+The chain served 60,794 outages across 222,924 roster reads and 76,715
+ownership checks. Every one of them degraded rather than denied: a roster
+outage never rendered as "you have no NFTs", and ownership never granted a
+fighter it could not confirm.
+
+Rejected, without exception: 14,000 malformed or forged callbacks, 20,000
+malformed updates, 6,000 wallet flows attempted in a group chat, 15,289 bad
+logins, and 390,000 flood messages.
