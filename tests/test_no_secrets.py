@@ -105,3 +105,26 @@ def test_variable_references_are_not_credentials(tmp_path):
         "other: postgresql://{{ secrets.U }}:{{ secrets.P }}@host/db\n"
     )
     assert _scan(tmp_path).returncode == 0
+
+
+def test_a_telegram_bot_token_is_caught(tmp_path):
+    """Whoever holds a bot token *is* the bot.
+
+    They can read every message sent to it and post as it, which makes a
+    committed token the most damaging leak this surface can produce.
+    """
+    (tmp_path / "leak.py").write_text(
+        'TOKEN = "9876" "54321:AAG0RealLookingTelegramTokenValue1234"\n'.replace('" "', "")
+    )
+    result = _scan(tmp_path)
+    assert result.returncode == 1
+    assert "Telegram bot token" in result.stdout
+
+
+def test_a_bot_token_inside_a_url_is_caught(tmp_path):
+    """It reaches a log as `/bot<token>`, with no word boundary in front of it."""
+    (tmp_path / "log.txt").write_text(
+        "POST https://api.telegram.org/bot98765"
+        "4321:AAG0RealLookingTelegramTokenValue1234/getUpdates failed\n"
+    )
+    assert _scan(tmp_path).returncode == 1

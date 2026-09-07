@@ -274,6 +274,106 @@ Enforcing that at the database level needs a role without `UPDATE`/`DELETE` on
 REVOKE UPDATE, DELETE ON audit_events FROM rivalforge_app;
 ```
 
+## The Telegram surface
+
+Telegram is the first place this game accepts input from strangers, so it is
+the first place where "never trust, always validate" has an actual adversary
+behind it rather than a careless caller.
+
+### The four threats, and what answers each
+
+**1. Formatting injection.** Telegram renders MarkdownV2. NFT names come from
+on-chain metadata, which *anyone* can write: minting a token called
+`[Claim your airdrop](https://evil.example)` costs a few cents, and rendering
+it unescaped turns another player's roster into a phishing link sent by our
+bot.
+
+Two choke points answer it, and they are deliberately in different places:
+
+* **Sanitising happens where the text enters** — `BotHandlers._fighters_for`,
+  once, as an NFT becomes a fighter. Control characters, bidi overrides and
+  excess length are removed there. Cleaning at each render site instead would
+  mean every new render site is a new chance to forget.
+* **Escaping happens where the text leaves** — `render.code_block`, the only
+  function in the package that produces a MarkdownV2 entity. Almost every
+  message the bot sends is one fenced block, where exactly two characters are
+  syntax rather than sixteen. A two-character escape surface with one function
+  guarding it is a thing that can be audited in a minute.
+
+**2. Forged and replayed callbacks.** `callback_data` travels to the user's
+client and comes back, so it is user input however it was produced. A player
+can send any string a button could have contained — including one they saw in
+someone else's chat.
+
+Every payload is HMAC-signed over the action, the argument **and the Telegram
+user id**, and verified with `hmac.compare_digest`. A button lifted from
+another chat fails verification instead of acting on that user's behalf. The
+signature is truncated to 80 bits because Telegram's `callback_data` ceiling is
+64 bytes; that is a per-user MAC over a short-lived, low-value action with no
+oracle and a round trip per attempt, and the alternative is buttons that do not
+fit.
+
+**3. The wrong chat.** A wallet challenge posted in a group is a challenge
+every member can read. `require_private_chat` gates `/connect`, `/signed` and
+`/roster`, and it refuses a missing chat rather than assuming it was private.
+
+**4. Flooding.** A bot is reachable by anyone who finds it. A per-user token
+bucket runs **before any work happens**, because the expensive parts — an RPC
+call, a database write — are exactly what a flood targets. The limiter is
+itself bounded in the number of users it tracks, evicting idle buckets first;
+an unbounded limiter is the memory-exhaustion vector it was meant to prevent.
+The same bound applies to conversation state.
+
+Messages that exceed the limit are dropped in silence. Answering a flood is
+amplifying it.
+
+### The bot token
+
+Whoever holds the token *is* the bot: they can read every message sent to it
+and post as it. So:
+
+* it comes from the environment (`RIVALFORGE_TELEGRAM_TOKEN` or
+  `TELEGRAM_BOT_TOKEN`) and never from a CLI argument, which is visible in
+  `ps` and in shell history;
+* its shape is validated at start-up, so a quote-wrapped or truncated token
+  fails immediately with a clear message rather than as a 404 half an hour
+  later;
+* it appears in every request URL, which is exactly the string a failed request
+  puts into a traceback — so the redaction filter carries a rule for it, the
+  client redacts transport errors and API rejections before they reach a log,
+  and the secret scanner fails CI on a token committed to the repository.
+
+### Long polling, not a webhook
+
+A webhook needs a public HTTPS endpoint, which is a listening socket on the
+internet and would be the largest piece of attack surface this project owns.
+Polling has none: the bot makes outbound connections only. There is nothing to
+find and nothing to scan.
+
+### What the bot never does
+
+It never builds, requests or relays a transaction. The only thing it ever asks
+a player to sign is the plain-text challenge from `auth/challenge.py`, which is
+constrained to printable ASCII starting with a letter or digit — bytes that
+cannot deserialise as a Solana transaction. The bot says so in the message
+itself, because a player's best defence is knowing what they should never be
+asked for.
+
+It never handles a private key, a seed phrase or a wallet file. There is no
+code path that could accept one.
+
+### What the bot keeps
+
+The numeric Telegram user id, and nothing else. Not the username, not the
+display name, not the language code, not the chat history. A username is a real
+identity in a way a wallet address is not.
+
+State lives in the process, bounded and idle-evicted, so a restart ends matches
+in progress and players reconnect. That is a real cost, accepted deliberately:
+the alternative is writing session tokens and half-finished matches to a
+database, and a durable copy of a bearer token is a worse thing to own than a
+lost match.
+
 ## Not yet addressed
 
 Stated plainly, because a security document that only lists strengths is
@@ -291,8 +391,13 @@ marketing.
   makes that map interesting.
 * **One connection per adapter, not a pool.** Correct under current load and
   the wrong thing to hand-roll; it needs a real pool before real concurrency.
-* **No rate limiting on the game itself**, only on challenge issuance. Needed
-  before a public endpoint.
+* **Rate limiting is per-surface, not global.** The Telegram bot has a
+  per-user token bucket and challenge issuance is capped per wallet, but there
+  is no shared limiter across surfaces or across processes. A second front end
+  will need one.
+* **Telegram conversation state is per-process.** Two workers behind the same
+  bot token would each hold half the conversations, and a restart drops them
+  all. Long polling with one worker is the supported deployment today.
 * **No durable audit sink.** Records are in memory and lost on restart. That is
   stated at start-up rather than left for an operator to discover.
 * **No match-result audit.** Required before anything of value rides on an

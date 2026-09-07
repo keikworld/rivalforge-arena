@@ -31,6 +31,10 @@ PATTERNS = [
     ("generic secret assign", re.compile(
         r"(?i)\b(password|passwd|secret|token|api_key|apikey|private_key)\s*[:=]\s*[\"'][^\"']{8,}[\"']")),
     ("hex seed (64 chars)", re.compile(r"\"seed\"\s*:\s*\"[0-9a-f]{64}\"")),
+    # A Telegram bot token. Whoever holds one *is* the bot: they can read
+    # every message sent to it and post as it. There is no leading word
+    # boundary because the token appears in a URL as `/bot<token>`.
+    ("Telegram bot token",  re.compile(r"(?<!\d)\d{6,12}:[A-Za-z0-9_-]{30,}(?![A-Za-z0-9_-])")),
     ("postgres URL",        re.compile(r"postgres(ql)?://[^\s\"']*:[^\s\"'@]+@")),
     ("connection w/ pwd",   re.compile(r"(?i)(mongodb|mysql|redis)://[^\s\"']*:[^\s\"'@]+@")),
 ]

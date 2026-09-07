@@ -171,3 +171,52 @@ one provider fail.
 The prompt treated any input starting with `s` as "spend soul", so typing
 `strike` silently asked to spend Soul instead of striking. Found by a test that
 typed nonsense and then a real word. Matching is now exact.
+
+### 15. `x or default()` is not `x if x is not None else default()`
+
+`BotHandlers.__init__` did `self._limiter = limiter or RateLimiter()`. Both
+`RateLimiter` and `StateStore` define `__len__`, so a fresh one is *falsy* —
+and the caller's carefully configured limiter was silently thrown away and
+replaced with a default. The rate limiter still existed, still ran, and let
+every request through, because the constructor built a new empty one each time
+the object was consulted from a test.
+
+Found by the first test that tried to flood the bot: three requests through a
+capacity-of-two limiter, all three answered. Had the test asserted "the bot
+still works under load" rather than "the third request is dropped", it would
+have passed.
+
+The rule: use `is None` for optional-dependency defaults, always. `or` is a
+truthiness test, and truthiness is a property of the *value*, not of whether an
+argument was supplied. Anything with `__len__` or `__bool__` is a trap.
+
+### 16. Dispatching on a rule's index broke when a rule was inserted
+
+The redaction module held its patterns in a tuple and chose a replacement by
+comparing the loop index against two constants: one for the address rule, one
+for the DSN rule. Adding a Telegram bot-token rule — which has to run *before*
+the base58 rule, or the token's secret half gets "truncated" into something
+that looks redacted and is not — shifted every index after it, and two
+unrelated rules quietly started using the wrong replacement.
+
+The rules now carry their own replacement function alongside the pattern.
+Nothing is positional, so inserting a rule cannot break the ones after it.
+
+The general form: when a lookup table needs a parallel array of behaviour, put
+the behaviour *in* the table. Index-based dispatch is correct exactly until
+someone inserts a row, and the failure is silent.
+
+### 17. Sanitise where text enters; escape where it leaves
+
+NFT names are written by whoever minted the token, which makes them the most
+hostile input this game handles — and they flow into formatted chat messages.
+The instinct is to escape at each render site. That is wrong twice: every new
+render site is a new chance to forget, and a name that has been
+MarkdownV2-escaped shows the player backslashes when it later goes into a code
+block instead.
+
+So there are two choke points, and they are in different places on purpose.
+Control characters, bidi overrides and excess length are stripped **once**, at
+the boundary where an `OwnedNFT` becomes a `Fighter`. Escaping happens **once**,
+in the single function that produces a Telegram entity. Neither one is repeated
+anywhere, and each has one job.

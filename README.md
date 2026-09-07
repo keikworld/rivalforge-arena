@@ -8,6 +8,7 @@ per-collection integration.
 $ rivalforge play
 $ rivalforge watch --a adaptive --b aggressive
 $ rivalforge wallet <your-wallet-address> --force
+$ rivalforge telegram                     # the same game, in a chat
 ```
 
 This is a ground-up rewrite. The previous codebase is dissected in
@@ -25,7 +26,7 @@ pip install -e ".[dev]"
 rivalforge play                  # play against an agent, no wallet needed
 rivalforge fighter <mint>        # what fighter does this NFT make?
 rivalforge features              # which features are on
-pytest                           # 325 tests
+pytest                           # 681 tests
 pytest -m integration            # 5 more, against live mainnet
 python tools/balance_sweep.py    # the balance harness
 ```
@@ -151,6 +152,7 @@ Collapsing the last two is how a game bans its players during an RPC outage.
 | `RIVALFORGE_PLAYER_STORE` | `memory` | `memory` or `postgres` |
 | `RIVALFORGE_DATABASE_URL` | — | Postgres DSN; `DATABASE_URL` is the fallback |
 | `RIVALFORGE_SESSION_FILE` | XDG state | where the file session store lives |
+| `RIVALFORGE_TELEGRAM_TOKEN` | — | the bot token; `TELEGRAM_BOT_TOKEN` is the fallback |
 
 Secrets come from the environment only — never a file in the repository, never
 a CLI argument (those are visible in `ps`), and never a log line: a redaction
@@ -164,13 +166,42 @@ filter is installed before anything can log.
 | [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | the rules, and why each number is what it is |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | threat model and controls |
 | [`docs/LESSONS_LEARNED.md`](docs/LESSONS_LEARNED.md) | what went wrong last time, and the rule each failure produced |
+| [`docs/TELEGRAM.md`](docs/TELEGRAM.md) | getting the bot running, and operating it |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | what ships next, and what has to be true first |
+
+## Playing it in a chat
+
+The same game, over Telegram, with buttons instead of a prompt:
+
+```bash
+export RIVALFORGE_FEATURE_TELEGRAM_BOT=1
+export RIVALFORGE_TELEGRAM_TOKEN='...'     # from @BotFather, environment only
+rivalforge telegram
+```
+
+Long polling rather than a webhook, so the bot makes outbound connections only
+and there is no inbound socket to find or scan. A thin `urllib` client rather
+than a framework, for the same reason the engine has no dependencies.
+
+The interesting part is that a chat is the first place this game meets
+strangers, and NFT names are written by whoever minted the token. A token
+called `[Claim your airdrop](https://evil.example)` costs a few cents to mint
+and would render as a phishing link inside a message the bot sent. So text is
+sanitised once where it enters and escaped once where it leaves; callback
+payloads are HMAC-signed and bound to the Telegram user id, so a button lifted
+from another chat does nothing; wallet flows are private-chat only; and a
+per-user token bucket runs before any work happens.
+
+The bot never builds, requests or relays a transaction, and it says so in the
+message it asks you to sign. See [`docs/TELEGRAM.md`](docs/TELEGRAM.md).
 
 ## Status
 
 **Phase 1 is complete and playable.** The duel, six arenas, four agents, the
-plugin layer, wallet verification, 325 unit tests, 5 live network tests, and a
-measured balance gate in CI.
+plugin layer, wallet verification, and a measured balance gate in CI.
 
-Phase 2 has wallet authentication, ownership gating, an audit trail and
-Postgres persistence. A Telegram client is next. See the roadmap.
+**Phase 2** adds wallet authentication, ownership gating, an audit trail,
+Postgres persistence and a Telegram client — 681 tests and 5 live network
+tests, all green. Next: an audit log of match results, encryption at rest for
+wallet linkage, and shared conversation state so the bot can run more than one
+worker. See the roadmap.

@@ -81,28 +81,79 @@ def _key_value_patterns(keys: Iterable[str]) -> list[Pattern[str]]:
     ]
 
 
-_PATTERNS: Final[tuple[Pattern[str], ...]] = (
-    *_key_value_patterns(_SECRET_KEYS),
+#: A Telegram bot token: a numeric bot id, a colon, then the secret half.
+#: Whoever holds one *is* the bot -- they can read every message sent to it and
+#: post as it. The token lives in a URL, which is exactly the kind of string
+#: that ends up in an exception message when a request fails.
+#: No leading word boundary: the token appears in a URL as `/bot<token>`,
+#: where there is no boundary between the "t" and the first digit -- which
+#: is precisely the string that ends up in a failed-request traceback.
+_BOT_TOKEN: Final = re.compile(r"(?<!\d)(\d{6,12}):[A-Za-z0-9_-]{30,}(?![A-Za-z0-9_-])")
+
+
+def _redact_value(match: "re.Match[str]") -> str:
+    """Keep the key, drop the value."""
+    return f"{match.group(1)}{REDACTED}"
+
+
+def _truncate_address(match: "re.Match[str]") -> str:
+    return short_address(match.group(1))
+
+
+def _redact_dsn_credentials(match: "re.Match[str]") -> str:
+    """Keep the scheme, host and database; drop the credentials."""
+    return f"{match.group(1)}{REDACTED}@"
+
+
+def _redact_bot_token(match: "re.Match[str]") -> str:
+    """Keep the bot id, drop the secret half. The id is public in every @mention."""
+    return f"{match.group(1)}:{REDACTED}"
+
+
+def _replace_wholly(match: "re.Match[str]") -> str:
+    return REDACTED
+
+
+#: Pattern paired with what to put in its place.
+#:
+#: Each rule carries its own replacement rather than being dispatched on its
+#: index in this tuple. The index form worked until a rule had to be inserted
+#: in the middle, at which point two other rules quietly started using the
+#: wrong replacement.
+#:
+#: Order matters: the bot token runs before the base58 rule, which would
+#: otherwise truncate the token's secret half into something that still looks
+#: redacted but is not.
+_RULES: Final[tuple[tuple[Pattern[str], object], ...]] = (
+    *((p, _redact_value) for p in _key_value_patterns(_SECRET_KEYS)),
+    (_BOT_TOKEN, _redact_bot_token),
     # A bare Solana-shaped base58 blob. Truncated rather than removed so two
     # log lines about the same wallet can still be correlated.
-    re.compile(r"\b([1-9A-HJ-NP-Za-km-z]{32,44})\b"),
+    (re.compile(r"\b([1-9A-HJ-NP-Za-km-z]{32,44})\b"), _truncate_address),
     # PEM private key blocks, in case one is ever interpolated into a message.
-    re.compile(r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----"),
+    (
+        re.compile(
+            r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----"
+        ),
+        _replace_wholly,
+    ),
     # JWT-shaped triples.
-    re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
+    (
+        re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
+        _replace_wholly,
+    ),
     # Connection strings with embedded credentials. A DSN in a stack trace is
     # a leaked database password, and a driver error is exactly the place one
     # shows up. The credentials go; the host and database stay, because those
     # are what make the line useful to whoever is reading it.
-    re.compile(
-        r"\b((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|rediss|amqp)://)"
-        r"[^\s:/@]+(?::[^\s@]*)?@",
+    (
+        re.compile(
+            r"\b((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|rediss|amqp)://)"
+            r"[^\s:/@]+(?::[^\s@]*)?@",
+        ),
+        _redact_dsn_credentials,
     ),
 )
-
-_ADDRESS_PATTERN_INDEX: Final = len(_key_value_patterns(_SECRET_KEYS))
-#: Index of the connection-string pattern, which needs its own replacement.
-_DSN_PATTERN_INDEX: Final = _ADDRESS_PATTERN_INDEX + 3
 
 
 def short_address(address: str, *, lead: int = 4, tail: int = 4) -> str:
@@ -118,17 +169,8 @@ def short_address(address: str, *, lead: int = 4, tail: int = 4) -> str:
 
 def redact(text: str) -> str:
     """Redact secrets and truncate address-shaped blobs in a block of text."""
-    for index, pattern in enumerate(_PATTERNS):
-        if index < _ADDRESS_PATTERN_INDEX:
-            text = pattern.sub(lambda m: f"{m.group(1)}{REDACTED}", text)
-        elif index == _ADDRESS_PATTERN_INDEX:
-            text = pattern.sub(lambda m: short_address(m.group(1)), text)
-        elif index == _DSN_PATTERN_INDEX:
-            # Keep the scheme and everything after the '@' -- host and database
-            # are what make the log line diagnosable.
-            text = pattern.sub(lambda m: f"{m.group(1)}{REDACTED}@", text)
-        else:
-            text = pattern.sub(REDACTED, text)
+    for pattern, replacement in _RULES:
+        text = pattern.sub(replacement, text)
     return text
 
 

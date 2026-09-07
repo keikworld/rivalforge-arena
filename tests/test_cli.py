@@ -234,3 +234,34 @@ class TestCli:
         out = capsys.readouterr().out
         assert "FrostKnight" in out
         assert "‍" not in out
+
+
+class TestTelegramCommand:
+    """The CLI entry point for the bot. The bot itself is tested elsewhere."""
+
+    def test_it_refuses_to_run_while_the_feature_is_off(self, capsys, monkeypatch):
+        """Nothing that reaches a third party runs without its toggle."""
+        monkeypatch.delenv("RIVALFORGE_FEATURE_TELEGRAM_BOT", raising=False)
+        assert main(["telegram"]) == 1
+        assert "RIVALFORGE_FEATURE_TELEGRAM_BOT" in capsys.readouterr().err
+
+    def test_a_missing_token_is_a_clear_error_not_a_traceback(self, capsys, monkeypatch):
+        monkeypatch.setenv("RIVALFORGE_FEATURE_TELEGRAM_BOT", "1")
+        monkeypatch.delenv("RIVALFORGE_TELEGRAM_TOKEN", raising=False)
+        monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+        assert main(["telegram"]) == 2
+        assert "RIVALFORGE_TELEGRAM_TOKEN" in capsys.readouterr().err
+
+    def test_a_malformed_token_fails_before_a_single_request(self, capsys, monkeypatch):
+        monkeypatch.setenv("RIVALFORGE_FEATURE_TELEGRAM_BOT", "1")
+        monkeypatch.setenv("RIVALFORGE_TELEGRAM_TOKEN", "not-a-token")
+        assert main(["telegram"]) == 2
+
+    def test_the_token_is_not_a_command_line_argument(self):
+        """Arguments are visible in `ps` and in shell history."""
+        from rivalforge.cli.main import build_parser
+
+        help_text = build_parser().format_help()
+        for action in build_parser()._subparsers._group_actions[0].choices["telegram"]._actions:
+            assert "token" not in " ".join(action.option_strings)
+        assert "--token" not in help_text

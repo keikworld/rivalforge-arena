@@ -511,6 +511,49 @@ def cmd_status(args: argparse.Namespace, content: GameContent) -> int:
     return 0
 
 
+def cmd_telegram(args: argparse.Namespace, content: GameContent) -> int:
+    """Run the Telegram bot.
+
+    Behind the `telegram_bot` toggle, like everything that reaches a third
+    party. The token comes from the environment and is never an argument here:
+    arguments are visible in `ps` and in shell history.
+    """
+    app = build_application()
+    if not app.features.enabled("telegram_bot"):
+        print(
+            "\n  The telegram_bot feature is off. Turn it on with:\n"
+            "    RIVALFORGE_FEATURE_TELEGRAM_BOT=1\n",
+            file=sys.stderr,
+        )
+        return 1
+
+    from ..telegram.api import TOKEN_ENV_VARS, TelegramAPI, read_token  # noqa: PLC0415
+    from ..telegram.bot import run_forever  # noqa: PLC0415
+    from ..telegram.handlers import BotHandlers  # noqa: PLC0415
+    from ..telegram.security import CallbackSigner  # noqa: PLC0415
+
+    try:
+        token = read_token()
+    except ValidationError as exc:
+        print(f"\n  {exc}", file=sys.stderr)
+        print(f"  Set one of: {', '.join(TOKEN_ENV_VARS)}\n", file=sys.stderr)
+        return 2
+
+    api = TelegramAPI(token)
+    handlers = BotHandlers(app, signer=CallbackSigner(), opponent=args.opponent)
+
+    print("\nRivalForge on Telegram\n")
+    print(app.describe())
+    print("\n  polling (ctrl-c to stop)\n")
+
+    code = run_forever(api, handlers, poll_seconds=args.poll_seconds)
+    if code != 0:
+        # `run_forever` logs the reason at ERROR, which is above the default
+        # level, so it is already on screen. Point at it rather than repeat it.
+        print("\n  The bot stopped -- see the error above.\n", file=sys.stderr)
+    return code
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="rivalforge", description="Sixty-second NFT duels.")
     parser.add_argument("--verbose", action="store_true", help="show debug logging")
@@ -577,6 +620,13 @@ def build_parser() -> argparse.ArgumentParser:
     whoami.add_argument("--force", action="store_true")
     whoami.add_argument("--limit", type=int, default=10)
     whoami.set_defaults(func=cmd_whoami)
+
+    telegram = sub.add_parser("telegram", help="run the Telegram bot (needs a token)")
+    telegram.add_argument("--opponent", default="adaptive", choices=sorted(AGENT_REGISTRY),
+                          help="which agent players face")
+    telegram.add_argument("--poll-seconds", type=int, default=25,
+                          help="how long each long poll waits")
+    telegram.set_defaults(func=cmd_telegram)
 
     audit = sub.add_parser("audit", help="show this process's audit trail")
     audit.add_argument("--limit", type=int, default=40)

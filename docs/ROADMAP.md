@@ -32,15 +32,24 @@ opponent wins 67% against 41% for random.
       in CI so nothing sensitive reaches the repository.
 - [x] **Pluggable session storage**, file-backed so `connect` and `play` share
       a session across processes.
-- [ ] `PlayerStore` on Postgres, behind the existing port. Six tables, not 96.
+- [x] `PlayerStore` on Postgres, behind the existing port. Six tables, not 96.
+      Sessions and the audit trail moved with it; every store implementation
+      is held to the same contract tests.
 - [ ] Encryption at rest for wallet linkage; the migration should assume the
       database will one day be dumped.
-- [ ] Telegram client, reusing `cli/render.py` — the renderer is already pure
-      string functions for exactly this reason.
+- [x] **Telegram client**, reusing `cli/render.py` — the renderer was pure
+      string functions for exactly this reason, and it paid off. A thin
+      `urllib` Bot API client rather than a framework, handlers that return
+      actions instead of performing I/O, HMAC-signed callbacks bound to the
+      user, a per-user token bucket, and one escaping choke point for
+      attacker-written NFT names. Long polling, so there is no inbound
+      socket. See [`TELEGRAM.md`](TELEGRAM.md).
 - [ ] Quick-time events, which need a timing channel the terminal cannot give.
 - [ ] Daily rotating arena, on the injected `Clock`.
 - [ ] Ladder and rank progression, already modelled and tested.
-- [ ] Rate limiting and an audit log of match results.
+- [x] Rate limiting on the chat surface, per user, checked before any work.
+- [ ] An audit log of match results.
+- [ ] Shared conversation state, so the bot can run more than one worker.
 
 **Gate:** fifty real players, and a day-2 retention number worth looking at.
 

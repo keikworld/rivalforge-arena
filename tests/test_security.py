@@ -190,6 +190,23 @@ class TestRedaction:
         out = redact(f"key: {pem}")
         assert "MIIBVQIBADAN" not in out
 
+    def test_a_telegram_bot_token_keeps_its_public_half_only(self):
+        """The bot id is public in every @mention; the secret half is the bot."""
+        # Assembled at runtime so no literal token sits in the file.
+        # NOT-A-REAL-SECRET
+        token = "123456789" + ":" + "AAFakeTokenForTestsOnlyNotRealAtAll"
+        out = redact(f"POST https://api.telegram.org/bot{token}/getUpdates")
+        assert "AAFakeTokenForTestsOnlyNotRealAtAll" not in out
+        assert "123456789" in out
+
+    def test_a_bot_token_is_redacted_before_the_address_rule_can_truncate_it(self):
+        """Order matters: base58 truncation would leave something that *looks*
+        redacted and is not."""
+        # As above -- no literal token in the file.
+        # NOT-A-REAL-SECRET
+        token = "987654321" + ":" + "AAHdqTcvCH1vGWJxfSeofSAs2K5PALDsaw"
+        assert "AAHdqTcvCH" not in redact(f"token={token}")
+
     def test_short_address_is_stable(self):
         assert short_address(VALID_MINT) == short_address(VALID_MINT)
         assert short_address("abc") == "abc"

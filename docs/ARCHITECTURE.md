@@ -7,9 +7,9 @@ right.
 
 ```
 security  <-  content  <-  engine  <-  agents
-                              ^     <-  plugins
+                              ^     <-  plugins  <-  auth  <-  store
                               |
-                             cli  (the only module that performs I/O)
+                    cli  and  telegram   (the front ends: the only I/O)
 ```
 
 | Package | Depends on | Responsibility |
@@ -19,7 +19,15 @@ security  <-  content  <-  engine  <-  agents
 | `engine/` | `content` | pure combat: no I/O, no clock, no globals |
 | `agents/` | `engine`, `plugins` | policies that play a side |
 | `plugins/` | `engine` | ports, registries, adapters, toggles, resilience |
-| `cli/` | everything | the only code that prints or reads |
+| `auth/` | `plugins`, `engine` | challenges, sessions, ownership gating, audit |
+| `store/` | `plugins`, `auth` | Postgres adapters and record validation |
+| `cli/` | everything | the terminal client and the composition root |
+| `telegram/` | everything | the chat client |
+
+The two front ends are peers. `telegram/` imports `cli.render` -- which is
+pure string functions -- and the `Application` the composition root builds, and
+nothing else from `cli/`. Deleting `telegram/` leaves a working game, which is
+the test that the layering is real rather than aspirational.
 
 CI fails if any module cannot be imported, which is the cheapest possible guard
 against the cycle problem that made the previous codebase unextractable.
@@ -79,6 +87,7 @@ The core imports the port; the wiring picks the adapter.
 | `Notifier` | `null` | `RIVALFORGE_NOTIFIER` |
 | `PaymentProvider` | — | `RIVALFORGE_PAYMENT_PROVIDER` |
 | `Clock` | `system`, `fixed` | `RIVALFORGE_CLOCK` |
+| `SessionStore` | `memory`, `file`, `postgres` | `RIVALFORGE_PLAYER_STORE` |
 
 Every default is inert: no network, no money, no writes. A fresh deployment with
 no configuration is safe rather than surprising.
