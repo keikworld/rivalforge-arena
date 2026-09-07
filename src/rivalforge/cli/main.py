@@ -170,9 +170,14 @@ def cmd_play(args: argparse.Namespace, content: GameContent) -> int:
     arena = _pick_arena(content, args.arena, rng.fork("arena"))
 
     if args.mint and not args.unverified:
-        # Playing a specific NFT goes through the ownership gate: a live
-        # session, then a fresh ownership check. Never a cached grant -- an NFT
-        # can be sold between one match and the next.
+        # Validate the address *before* looking at auth state. A malformed
+        # mint is malformed whether or not anyone is signed in, and answering
+        # "connect a wallet first" to a typo sends the player down the wrong
+        # path entirely. Input validation first, authorisation second.
+        validate_mint_address(args.mint, field="mint")
+
+        # Then the ownership gate: a live session, then a fresh ownership
+        # check. Never a cached grant -- an NFT can be sold between matches.
         app = build_application()
         saved = _load_session()
         if saved is None:

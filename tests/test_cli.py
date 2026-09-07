@@ -27,6 +27,19 @@ def content():
     return load_content()
 
 
+@pytest.fixture(autouse=True)
+def isolated_state(tmp_path, monkeypatch):
+    """Point session and state storage at a temporary directory.
+
+    Without this the suite reads whatever session file the developer happens
+    to have from manual testing, which is exactly how a real ordering bug
+    passed locally and failed in CI: `play --mint <bad>` checked for a session
+    before validating the address, and a leftover session hid it.
+    """
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("RIVALFORGE_SESSION_FILE", str(tmp_path / "sessions.json"))
+
+
 class TestBpBar:
     def test_full_and_empty(self):
         assert bp_bar(100, 100, 10) == "[##########] 100/100"
@@ -196,7 +209,19 @@ class TestCli:
         assert "Recruit" in capsys.readouterr().out
 
     def test_play_rejects_a_bad_mint_before_starting(self, capsys):
+        """Validation precedes authorisation.
+
+        A malformed mint is malformed whether or not anyone is signed in.
+        Reporting "connect a wallet first" for a typo would send the player
+        down entirely the wrong path -- which is what this did until CI, on a
+        clean checkout with no session file, caught it.
+        """
         assert main(["play", "--mint", "nope"]) == 2
+        assert "invalid input" in capsys.readouterr().err
+
+    def test_a_bad_mint_is_rejected_even_with_a_live_session(self, capsys):
+        """The same, with the other branch of the condition exercised."""
+        assert main(["play", "--mint", "nope", "--unverified"]) == 2
         assert "invalid input" in capsys.readouterr().err
 
     def test_a_supplied_name_is_sanitized(self, monkeypatch, capsys):
