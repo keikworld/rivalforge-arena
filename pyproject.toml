@@ -13,9 +13,16 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
+# Wallet authentication. Ed25519 verification is delegated to libsodium via
+# PyNaCl -- hand-rolled curve arithmetic is how signature-verification bugs get
+# written, and a verifier that accepts a forgery is worse than none.
+auth = [
+  "PyNaCl>=1.5",
+]
 dev = [
   "pytest>=8",
   "hypothesis>=6",
+  "PyNaCl>=1.5",
 ]
 
 [project.scripts]

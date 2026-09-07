@@ -17,8 +17,11 @@ them into strings, and this module is the only place that prints or reads.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import os
 import sys
+from pathlib import Path
 from typing import Final
 
 from ..agents.builtin import AGENT_REGISTRY, build_agent
@@ -28,8 +31,14 @@ from ..engine import balance
 from ..engine.fighter import Fighter, derive_fighter, starter_fighter
 from ..engine.match import Decision, Match, MatchView, Side, SupportsDecide
 from ..engine.rng import RNG, new_seed
+from ..auth.challenge import AuthError
+from ..auth.service import OwnershipRequired
+from ..auth.store import RateLimitExceeded
 from ..plugins.registries import WALLET_PROVIDERS, wallet_provider
 from ..plugins.toggles import Toggles, toggles
+from .localkey import WARNING as LOCAL_KEY_WARNING
+from .localkey import LocalKeypair
+from .wiring import build_application
 from ..security.redaction import install_redaction, short_address
 from ..security.validation import ValidationError, validate_mint_address
 from . import render
@@ -160,7 +169,31 @@ def cmd_play(args: argparse.Namespace, content: GameContent) -> int:
     rng = RNG(seed)
     arena = _pick_arena(content, args.arena, rng.fork("arena"))
 
-    you = _resolve_fighter(content, args.mint, args.name)
+    if args.mint and not args.unverified:
+        # Playing a specific NFT goes through the ownership gate: a live
+        # session, then a fresh ownership check. Never a cached grant -- an NFT
+        # can be sold between one match and the next.
+        app = build_application()
+        saved = _load_session()
+        if saved is None:
+            print("\n  Connect a wallet first:  rivalforge connect --key ./test-key.json",
+                  file=sys.stderr)
+            print("  Or pass --unverified to play it without an ownership check.",
+                  file=sys.stderr)
+            return 1
+        try:
+            you = app.wallets.fighter_for(saved[0], args.mint, name=args.name)
+        except AuthError:
+            print("\n  Session expired. Run connect again.", file=sys.stderr)
+            return 1
+        except OwnershipRequired as exc:
+            print(f"\n  {exc}", file=sys.stderr)
+            return 3
+        print(f"\n  Ownership verified for {you.short_mint}")
+    else:
+        if args.mint and args.unverified:
+            print("\n  !! --unverified: playing this NFT WITHOUT an ownership check.")
+        you = _resolve_fighter(content, args.mint, args.name)
     opponent_mint = args.opponent_mint
     them = (
         derive_fighter(opponent_mint, content, name="Rival")
@@ -321,6 +354,158 @@ def cmd_features(args: argparse.Namespace, content: GameContent) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# Wallet connection (Phase 2)
+# --------------------------------------------------------------------------
+
+
+def _session_path() -> Path:
+    """Where the CLI remembers a session token between commands.
+
+    Owner-only, and it holds a short-lived session token -- never a key. Losing
+    it costs a re-sign, nothing more.
+    """
+    base = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    return base / "rivalforge" / "session.json"
+
+
+def _save_session(token: str, wallet: str) -> Path:
+    path = _session_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        json.dump({"token": token, "wallet": wallet}, handle)
+    return path
+
+
+def _load_session() -> tuple[str, str] | None:
+    path = _session_path()
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return raw["token"], raw["wallet"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def cmd_connect(args: argparse.Namespace, content: GameContent) -> int:
+    """Connect a wallet by signing a challenge.
+
+    Two modes:
+
+    * `--key <file>` signs locally with a throwaway test key, so the whole flow
+      can be exercised without a browser wallet;
+    * without it, the challenge is printed for the player to sign in their own
+      wallet and paste back.
+    """
+    app = build_application(overrides={"wallet_verification": True} if args.force else None)
+    service = app.wallets
+
+    if args.key:
+        path = Path(args.key)
+        if path.exists():
+            keypair = LocalKeypair.load(path)
+            print(f"\n  Loaded test key {keypair.address[:4]}...{keypair.address[-4:]}")
+        else:
+            keypair = LocalKeypair.generate()
+            keypair.save(path)
+            print(f"\n  Generated a test key at {path} (owner-only)")
+        print(f"  !! {LOCAL_KEY_WARNING}")
+        wallet_address = keypair.address
+    else:
+        keypair = None
+        if not args.wallet:
+            print("give --wallet <address>, or --key <file> to use a test key",
+                  file=sys.stderr)
+            return 2
+        wallet_address = args.wallet
+
+    try:
+        challenge = service.begin(wallet_address)
+    except RateLimitExceeded:
+        print("\n  Too many sign-in attempts for that wallet. Wait a few minutes.",
+              file=sys.stderr)
+        return 4
+
+    print("\n" + "-" * 62)
+    print(challenge.message)
+    print("-" * 62)
+
+    if keypair is not None:
+        signature = keypair.sign(challenge.message)
+        print("\n  Signed locally with the test key.")
+    else:
+        print("\n  Sign the text above in your wallet, then paste the signature.")
+        print("  RivalForge will NEVER ask for your private key or seed phrase.")
+        try:
+            signature = input("\n  signature (base58) > ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n  Cancelled.")
+            return 130
+
+    try:
+        connected = service.complete(challenge.nonce, signature)
+    except AuthError:
+        # One generic message: distinguishing failures would be an oracle.
+        print("\n  Authentication failed.", file=sys.stderr)
+        return 4
+
+    path = _save_session(connected.token, connected.wallet)
+    print(f"\n  Connected as {connected.short_wallet}")
+    print(f"  Session valid until {connected.expires_at.isoformat()}")
+    print(f"  Token stored at {path} (owner-only; not a key)")
+    return 0
+
+
+def cmd_whoami(args: argparse.Namespace, content: GameContent) -> int:
+    """Resolve the stored token against the live session store."""
+    app = build_application(overrides={"wallet_verification": True} if args.force else None)
+    saved = _load_session()
+    if saved is None:
+        print("\n  Not connected. Run: rivalforge connect --key ./test-key.json")
+        return 1
+    token, _ = saved
+    try:
+        wallet = app.wallets.wallet_for(token)
+    except AuthError:
+        print("\n  Session expired or revoked. Run connect again.")
+        return 1
+    print(f"\n  Connected as {wallet[:4]}...{wallet[-4:]}")
+    if app.features.enabled("wallet_verification"):
+        try:
+            owned = app.wallets.roster(token, limit=args.limit)
+        except RuntimeError as exc:
+            print(f"  (could not read holdings: {exc})")
+            return 0
+        print(f"  {len(owned)} playable NFT(s):\n")
+        for nft in owned:
+            fighter = derive_fighter(nft.mint, content, name=nft.name)
+            print(f"    {nft.short_mint}  {render.render_fighter(fighter)}")
+    return 0
+
+
+def cmd_audit(args: argparse.Namespace, content: GameContent) -> int:
+    """Show the audit trail for this process."""
+    app = build_application()
+    records = app.audit_sink.records()
+    print(f"\n  {len(records)} audit record(s) in this process\n")
+    for record in records[-args.limit:]:
+        print("  " + record.redacted())
+    if not records:
+        print("  (the in-memory sink starts empty each run)")
+    return 0
+
+
+def cmd_status(args: argparse.Namespace, content: GameContent) -> int:
+    """What this deployment actually does. The operator's first command."""
+    app = build_application()
+    print("\nRivalForge status\n")
+    print(app.describe())
+    print("\nFeatures:\n")
+    print(app.features.describe())
+    print()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="rivalforge", description="Sixty-second NFT duels.")
     parser.add_argument("--verbose", action="store_true", help="show debug logging")
@@ -333,6 +518,10 @@ def build_parser() -> argparse.ArgumentParser:
     play.add_argument("--opponent-mint", help="the opponent's NFT mint address")
     play.add_argument("--arena", help="arena id (default: random)")
     play.add_argument("--seed", type=int, help="replay a specific match")
+    play.add_argument(
+        "--unverified", action="store_true",
+        help="skip the ownership check for --mint (local play only)",
+    )
     play.set_defaults(func=cmd_play)
 
     watch = sub.add_parser("watch", help="watch two agents play")
@@ -365,6 +554,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     features = sub.add_parser("features", help="show which features are enabled")
     features.set_defaults(func=cmd_features)
+
+    status = sub.add_parser("status", help="what this deployment is configured to do")
+    status.set_defaults(func=cmd_status)
+
+    connect = sub.add_parser("connect", help="connect a wallet by signing a challenge")
+    connect.add_argument("--wallet", help="your wallet address (you sign in your own wallet)")
+    connect.add_argument(
+        "--key", metavar="FILE",
+        help="sign locally with a THROWAWAY TEST key at FILE, generating one if absent",
+    )
+    connect.add_argument("--force", action="store_true",
+                         help="enable wallet verification for this command only")
+    connect.set_defaults(func=cmd_connect)
+
+    whoami = sub.add_parser("whoami", help="show the stored session and its fighters")
+    whoami.add_argument("--force", action="store_true")
+    whoami.add_argument("--limit", type=int, default=10)
+    whoami.set_defaults(func=cmd_whoami)
+
+    audit = sub.add_parser("audit", help="show this process's audit trail")
+    audit.add_argument("--limit", type=int, default=40)
+    audit.set_defaults(func=cmd_audit)
 
     return parser
 

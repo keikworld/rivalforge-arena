@@ -14,3 +14,16 @@ htmlcov/
 
 .env
 *.local.json
+
+# Keys and sessions must never be committed. The CLI writes these outside the
+# repository by default; these patterns are the backstop for anyone who points
+# --key at the working directory.
+*.key.json
+*-key.json
+test-key*.json
+tk.json
+session*.json
+sessions*.json
+*.pem
+*.keypair
+id_ed25519*

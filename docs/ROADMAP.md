@@ -22,11 +22,16 @@ opponent wins 67% against 41% for random.
 
 ## Phase 2 — a game other people can play
 
-Persistence and Telegram. Nothing here is started.
-
-- [ ] **Wallet control, not just ownership.** A signature challenge proving the
-      player holds the key, not merely that they copied an address. This is the
-      gap that matters most: today someone can play with any wallet's NFTs.
+- [x] **Wallet control, not just ownership.** A signature challenge proving the
+      player holds the key, not merely that they copied an address. Message
+      signatures only -- never a transaction, never key material. 74 security
+      tests covering replay, expiry, domain binding, flooding and enumeration.
+- [x] **Ownership gating on every use**, failing closed when it cannot be
+      confirmed.
+- [x] **Audit trail** with deliberate data minimisation, and a secrets scanner
+      in CI so nothing sensitive reaches the repository.
+- [x] **Pluggable session storage**, file-backed so `connect` and `play` share
+      a session across processes.
 - [ ] `PlayerStore` on Postgres, behind the existing port. Six tables, not 96.
 - [ ] Encryption at rest for wallet linkage; the migration should assume the
       database will one day be dumped.

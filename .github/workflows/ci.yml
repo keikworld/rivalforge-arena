@@ -35,6 +35,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: No secrets in the repository
+        # Runs before anything else that could be slow: if a credential is in
+        # the tree, nothing about the rest of the build matters.
+        run: python tools/scan_secrets.py .
+
       - name: Every module must import
         # The cheapest possible guard against the failure mode that made the
         # previous codebase unrunnable: 248 of its 266 modules could not be

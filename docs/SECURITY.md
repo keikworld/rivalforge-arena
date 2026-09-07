@@ -120,21 +120,129 @@ makes no ownership claim; verification is a separate, explicit call.
 * `MAX_ROUNDS` stops a pathological pair of defensive policies looping forever.
 * The circuit breaker stops us amplifying a provider's outage.
 
+## Wallet authentication
+
+### Why this cannot drain a wallet
+
+The guarantee, first:
+
+* We request a signature over **human-readable text**, never a transaction. A
+  message signature moves nothing: no transfer, no delegation, no token
+  approval, no program invocation.
+* We never ask for, receive, store, transmit or log a private key or seed
+  phrase. No key material enters the process.
+* There is **no code path in this repository that can construct a Solana
+  transaction**, and a test asserts it by scanning every module for
+  transaction-building and key-handling symbols.
+
+One further attack deserves naming, because "we only sign messages" is not by
+itself sufficient. A hostile site can ask a wallet to sign bytes that are
+secretly a *serialised transaction* -- blind signing. The defence is that our
+message is constrained to printable ASCII beginning with an alphanumeric
+character, while a Solana transaction begins with a compact-u16 signature
+count, a byte in 1..255. The constraint is enforced at construction and
+asserted in the tests.
+
+The signed text also says, in plain words, that it is not a transaction. The
+player reading their wallet prompt is the last line of defence and deserves a
+sentence they can act on.
+
+### The flow
+
+1. `begin(wallet)` mints a single-use, wallet-bound challenge with a 256-bit
+   nonce and a five-minute expiry.
+2. The player signs it in their own wallet.
+3. `complete(nonce, signature)` verifies and issues a session.
+
+Step 3 is where implementations usually go wrong. The message verified is the
+one **rebuilt from server-held state**, never one the client supplied -- a
+verifier that checks a client-supplied message proves only that the caller can
+sign something it chose.
+
+### Controls
+
+| Attack | Control |
+|---|---|
+| Replay | 256-bit nonce, single use, atomic get-and-delete. A *failed* attempt burns the nonce too, so signatures cannot be ground against a live challenge. |
+| Concurrent replay | `consume` is atomic; a test races eight threads and asserts exactly one wins. |
+| Phishing replay | The domain is bound into the signed text and re-checked at verification. |
+| Stale challenge | Five-minute expiry, checked against an injected clock, with a 30-second skew allowance. |
+| Enumeration | Every failure returns one generic message. The specific reason goes to the audit trail and the log only. |
+| Challenge flooding | Five live challenges per wallet; a bounded, self-evicting store; malformed addresses rejected before anything is stored. |
+| Session theft from storage | Tokens are stored as SHA-256 hashes. A dump of the session store yields no live sessions. |
+| Forged signature | Verification is libsodium via PyNaCl. No hand-rolled curve arithmetic. |
+| Malformed input | Every field is type- and length-checked before use; a bad signature is a clean rejection, never a crash. |
+
+### Ownership is checked on every use
+
+`fighter_for` re-checks ownership each time, rather than trusting an earlier
+result: an NFT can be sold between one match and the next.
+
+Ownership **fails closed** -- if we cannot confirm it, we do not grant it.
+That is deliberately the opposite of the rule for *reading* a roster, where an
+outage is surfaced as an error rather than as an empty list. Refusing to check
+is not permission.
+
+## The audit trail
+
+Two rules pulling against each other:
+
+* record enough to investigate abuse;
+* record nothing else.
+
+**Recorded:** wallet address, event kind, outcome, UTC timestamp, short reason.
+The wallet is the identity being authenticated, so a trail without it records
+nothing useful.
+
+**Deliberately not recorded:** IP addresses, user agents, device or browser
+fingerprints, geolocation, email addresses, session tokens or their hashes,
+signatures, challenge text. None is needed to answer "did this wallet
+authenticate, when, and did it work", and each is a liability with no matching
+benefit. Tests assert that secrets and network identifiers never reach a record.
+
+Audit records and application logs are different things: the trail holds full
+addresses because that is its job; the log never does, because the redaction
+filter truncates every address that reaches it. Logs travel further than
+databases do.
+
+A failing audit sink is logged and swallowed. Losing a record is bad; failing a
+player's login because the audit backend is down is worse, and would be an
+availability hole an attacker could trigger deliberately.
+
+## Secrets never reach the repository
+
+`tools/scan_secrets.py` runs in CI on every push and as a test, so it fails on
+a developer's machine before a push rather than after. A secret in a public
+repository is compromised the moment it lands, however quickly it is deleted.
+
+It scans for private-key blocks, JWTs, AWS/GitHub/Slack/Stripe/OpenAI key
+shapes, generic `secret = "..."` assignments, database URLs with embedded
+passwords, and hex seeds. Test fixtures that must contain secret-shaped strings
+assemble them at runtime and carry a `NOT-A-REAL-SECRET` comment -- excluding
+`tests/` wholesale would have been easier and would also have stopped the
+scanner ever protecting those files.
+
+`.gitignore` covers key and session filename patterns as a backstop, and a test
+asserts no such file is tracked.
+
 ## Not yet addressed
 
 Stated plainly, because a security document that only lists strengths is
 marketing.
 
-* **No authentication.** There are no accounts yet. Wallet *ownership* is
-  verified; wallet *control* (a signature challenge proving the player holds the
-  key) is Phase 2 and is what stops someone playing with an address they merely
-  copied.
-* **No rate limiting** on the game itself. Needed before a public endpoint.
-* **No persistence**, so no encryption at rest yet. When the player store
-  lands, wallet linkage is the field that needs encrypting, and the migration
-  must assume the database will be dumped.
-* **No audit log** of match results. Required before anything of value rides on
-  an outcome; the deterministic seed makes it cheap, since a match is one row.
+* **Sessions and challenges are single-machine.** The file-backed session store
+  is correct for the CLI; a multi-worker deployment needs a shared backend or
+  one worker will not recognise another's session. That fails closed -- a
+  rejected login, not an accepted one -- but it is not yet fit for scale.
+* **No encryption at rest.** The session file holds token hashes and wallet
+  addresses, not secrets, but the Postgres store must encrypt wallet linkage
+  and should assume the database will one day be dumped.
+* **No rate limiting on the game itself**, only on challenge issuance. Needed
+  before a public endpoint.
+* **No durable audit sink.** Records are in memory and lost on restart. That is
+  stated at start-up rather than left for an operator to discover.
+* **No match-result audit.** Required before anything of value rides on an
+  outcome; the deterministic seed makes it cheap, since a match is one row.
 
 ## Reporting
 
