@@ -55,8 +55,9 @@ class Application:
     content: GameContent
     features: Toggles
     wallets: WalletService
-    audit_sink: InMemoryAuditSink
+    audit_sink: object
     clock: object
+    players: object | None = None
 
     def describe(self) -> str:
         """A start-up banner an operator can read to know what is live."""
@@ -67,8 +68,14 @@ class Application:
             f"  wallet provider     : {getattr(provider, 'name', type(provider).__name__)}\n"
             f"  ownership enforced  : "
             f"{'yes' if getattr(self.wallets, '_require_ownership', True) else 'NO'}\n"
-            f"  audit sink          : {self.audit_sink.name} "
-            f"({'durable' if getattr(self.audit_sink, 'durable', False) else 'in memory, lost on restart'})"
+            f"  audit sink          : {getattr(self.audit_sink, 'name', '?')} "
+            f"({'durable' if getattr(self.audit_sink, 'durable', False) else 'in memory, lost on restart'})\n"
+            f"  persistence         : "
+            + (
+                f"postgres ({self.players.dsn_for_logging})"
+                if self.players is not None
+                else "off (players and ladder are not saved)"
+            )
         )
 
 
@@ -106,8 +113,32 @@ def build_application(
         session_store = FileSessionStore(session_path)
     else:
         session_store = FileSessionStore(_default_session_path(environment))
-    sessions = SessionService(clock, store=session_store)
     audit_sink = InMemoryAuditSink()
+    players = None
+
+    # Persistence is opt-in and fails loudly. Silently falling back to memory
+    # when a database was configured would look like it persists and would not.
+    if features.enabled("persistence"):
+        try:
+            from ..store.postgres import (  # noqa: PLC0415
+                PostgresAuditSink,
+                PostgresPlayerStore,
+                PostgresSessionStore,
+                apply_schema,
+                connection_url,
+            )
+
+            url = connection_url(environment)
+            apply_schema(url)
+            session_store = PostgresSessionStore(url)
+            audit_sink = PostgresAuditSink(url)
+            players = PostgresPlayerStore(url)
+            logger.info("persistence enabled: %s", players.dsn_for_logging)
+        except Exception:
+            logger.exception("persistence is enabled but the database is unreachable")
+            raise
+
+    sessions = SessionService(clock, store=session_store)
     ownership = wallet_provider(features, env=environment)
 
     # Ownership enforcement follows the same toggle as verification. With
@@ -133,4 +164,5 @@ def build_application(
         wallets=wallets,
         audit_sink=audit_sink,
         clock=clock,
+        players=players,
     )

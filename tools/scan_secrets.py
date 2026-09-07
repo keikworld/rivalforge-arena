@@ -36,16 +36,29 @@ PATTERNS = [
 ]
 
 # Values that are legitimately present and are NOT secrets.
-ALLOWED_SUBSTRINGS = (
-    # Redaction-test fixtures. Each is a string the filter must scrub; none is
-    # a real credential, and each sits beside a NOT-A-REAL-SECRET comment.
-    "super-secret-key",
-    "topsecretvalue",
-    "hunter2",
-    "sk-live-0000",
-    "abcdefghijklmnop",
-    "no-key-needed",
-)
+#: Fixtures are exempted by an in-line marker, never by value.
+#:
+#: An earlier version allowlisted the fixture *strings* -- "hunter2" and the
+#: like. That was a real hole: any file anywhere in the tree containing one of
+#: those substrings was skipped, so a genuine credential that happened to sit
+#: on a line with a fixture value would have passed. It was caught by a test
+#: that planted a real-looking DSN using "hunter2" as the password and saw the
+#: scanner stay silent.
+#:
+#: A marker is scoped to the line it is on (or the line above), so exempting
+#: one fixture cannot accidentally exempt anything else.
+MARKER = "NOT-A-REAL-SECRET"
+
+#: A credential made of variable references is not a credential. `${VAR}`,
+#: `$(cmd)`, `{{ secrets.X }}`, `%(name)s` and `<placeholder>` are all
+#: indirection, and flagging them trains people to ignore the scanner -- which
+#: is how a real finding gets waved through.
+INDIRECTION = re.compile(r"\$\{|\$\(|\{\{|%\(|%s\b|<[A-Za-z_]+>")
+
+
+def _is_indirection(snippet: str) -> bool:
+    return bool(INDIRECTION.search(snippet))
+
 
 findings = []
 for path in sorted(ROOT.rglob("*")):
@@ -57,13 +70,18 @@ for path in sorted(ROOT.rglob("*")):
         text = path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
         continue
+    lines = text.splitlines()
     for label, pattern in PATTERNS:
         for match in pattern.finditer(text):
             snippet = match.group(0)
-            if any(a in snippet for a in ALLOWED_SUBSTRINGS):
+            if _is_indirection(snippet):
                 continue
-            line = text[:match.start()].count("\n") + 1
-            findings.append((str(path.relative_to(ROOT)), line, label, snippet[:70]))
+            number = text[: match.start()].count("\n") + 1
+            # The marker must be on this line or the one above it.
+            context = " ".join(lines[max(0, number - 2) : number])
+            if MARKER in context:
+                continue
+            findings.append((str(path.relative_to(ROOT)), number, label, snippet[:70]))
 
 print(f"scanned {ROOT}")
 if findings:

@@ -619,6 +619,7 @@ class TestDasWalletProvider:
 
     def test_the_api_key_never_appears_in_an_error(self):
         provider = DasWalletProvider(
+            # NOT-A-REAL-SECRET: a fixture asserting a key never reaches an error.
             api_key="super-secret-key",
             opener=_opener_raising(urllib.error.HTTPError("u", 500, "e", {}, None)),
             policy=RetryPolicy(attempts=1, base_delay=0, total_timeout=1),

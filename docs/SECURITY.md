@@ -225,18 +225,72 @@ scanner ever protecting those files.
 `.gitignore` covers key and session filename patterns as a backstop, and a test
 asserts no such file is tracked.
 
+## The database
+
+**Every query is parameterised**, and a test scans the source for f-strings or
+`.format()` inside query literals. Table names are compile-time constants,
+never inputs.
+
+**Validation happens before SQL, not instead of it.** Player identifiers are
+rejected at the boundary if they are not strict snake-ish identifiers, so an
+injection attempt never reaches the driver. Parameterisation still carries the
+weight for free-text fields like display names, which legitimately contain
+quotes and semicolons -- both are tested.
+
+**Never trust, always validate -- including the database.** Rows are validated
+on the way *out* as well as in. A migration, a hand-run `UPDATE`, or a second
+writer can all leave a row that breaks the application's rules, and loading it
+blindly produces behaviour no test predicts. A bad row raises `CorruptRecord`
+rather than being silently loaded, and the error names the row without echoing
+its values -- a corrupt row can contain anything, and copying it into an
+exception message is how that reaches a log or a screen.
+
+**Bounded deltas.** A match moves the ladder by 15 points at most; the store
+refuses anything beyond ±1,000, so a buggy or compromised caller cannot mint an
+unreachable score. Out-of-range values are *rejected*, never clamped --
+clamping hides the bug that produced them.
+
+**TLS is required** for any non-loopback host: `sslmode=require` is appended
+unless the URL sets one. Disabling it needs an explicit
+`RIVALFORGE_DB_ALLOW_INSECURE=1` and logs a warning.
+
+**The connection string is a secret.** Environment only. The redaction filter
+scrubs credentials from any DSN reaching a log while keeping the scheme, host
+and database, so the line stays diagnosable. A driver error is exactly where a
+connection string surfaces.
+
+**Both backends enforce identical rules.** The memory and Postgres stores are
+run through the same contract tests, because a port with two implementations
+that behave differently is worse than one -- the difference only shows up in
+production.
+
+### Deployment note: the audit table should be append-only
+
+`PostgresAuditSink` offers no update or delete method, and a test asserts it.
+Enforcing that at the database level needs a role without `UPDATE`/`DELETE` on
+`audit_events`, which is a deployment step this code cannot take for you:
+
+```sql
+REVOKE UPDATE, DELETE ON audit_events FROM rivalforge_app;
+```
+
 ## Not yet addressed
 
 Stated plainly, because a security document that only lists strengths is
 marketing.
 
-* **Sessions and challenges are single-machine.** The file-backed session store
-  is correct for the CLI; a multi-worker deployment needs a shared backend or
-  one worker will not recognise another's session. That fails closed -- a
-  rejected login, not an accepted one -- but it is not yet fit for scale.
-* **No encryption at rest.** The session file holds token hashes and wallet
-  addresses, not secrets, but the Postgres store must encrypt wallet linkage
-  and should assume the database will one day be dumped.
+* **Challenges are still single-machine.** Sessions now share a Postgres
+  backend, but the challenge store does not, so a multi-worker deployment can
+  issue a challenge on one worker and fail to verify it on another. That fails
+  closed -- a rejected login, not an accepted one -- and it is the next thing
+  to move.
+* **No encryption at rest for wallet linkage.** The database holds wallet
+  addresses in plaintext. They are public on-chain, so this is a privacy
+  question rather than a credential one, but a dump would still be a map of who
+  plays what. Column-level encryption is worth doing before the player count
+  makes that map interesting.
+* **One connection per adapter, not a pool.** Correct under current load and
+  the wrong thing to hand-roll; it needs a real pool before real concurrency.
 * **No rate limiting on the game itself**, only on challenge issuance. Needed
   before a public endpoint.
 * **No durable audit sink.** Records are in memory and lost on restart. That is

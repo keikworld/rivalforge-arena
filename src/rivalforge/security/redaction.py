@@ -90,9 +90,19 @@ _PATTERNS: Final[tuple[Pattern[str], ...]] = (
     re.compile(r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----"),
     # JWT-shaped triples.
     re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
+    # Connection strings with embedded credentials. A DSN in a stack trace is
+    # a leaked database password, and a driver error is exactly the place one
+    # shows up. The credentials go; the host and database stay, because those
+    # are what make the line useful to whoever is reading it.
+    re.compile(
+        r"\b((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|rediss|amqp)://)"
+        r"[^\s:/@]+(?::[^\s@]*)?@",
+    ),
 )
 
 _ADDRESS_PATTERN_INDEX: Final = len(_key_value_patterns(_SECRET_KEYS))
+#: Index of the connection-string pattern, which needs its own replacement.
+_DSN_PATTERN_INDEX: Final = _ADDRESS_PATTERN_INDEX + 3
 
 
 def short_address(address: str, *, lead: int = 4, tail: int = 4) -> str:
@@ -113,6 +123,10 @@ def redact(text: str) -> str:
             text = pattern.sub(lambda m: f"{m.group(1)}{REDACTED}", text)
         elif index == _ADDRESS_PATTERN_INDEX:
             text = pattern.sub(lambda m: short_address(m.group(1)), text)
+        elif index == _DSN_PATTERN_INDEX:
+            # Keep the scheme and everything after the '@' -- host and database
+            # are what make the log line diagnosable.
+            text = pattern.sub(lambda m: f"{m.group(1)}{REDACTED}@", text)
         else:
             text = pattern.sub(REDACTED, text)
     return text

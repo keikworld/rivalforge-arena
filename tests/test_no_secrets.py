@@ -58,3 +58,50 @@ def test_no_key_or_session_file_is_tracked_by_git():
         or "key" in pathlib.Path(name).name.lower() and name.endswith(".json")
     ]
     assert not suspicious, f"key/session files are tracked: {suspicious}"
+
+
+def _scan(directory) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(SCANNER), str(directory)],
+        capture_output=True, text=True, timeout=60,
+    )
+
+
+def test_a_real_connection_string_is_caught(tmp_path):
+    """A DSN with an embedded password is a credential wherever it appears."""
+    (tmp_path / "leak.py").write_text(
+        'DSN = "postgres" "ql://admin:s3cr3t@db.example.com/x"\n'.replace('" "', "")
+    )
+    result = _scan(tmp_path)
+    assert result.returncode == 1
+    assert "postgres URL" in result.stdout
+
+
+def test_a_marked_fixture_is_exempt(tmp_path):
+    (tmp_path / "fixture.py").write_text(
+        "# NOT-A-REAL-SECRET: fixture\n"
+        'DSN = "postgres" "ql://admin:s3cr3t@db.example.com/x"\n'.replace('" "', "")
+    )
+    assert _scan(tmp_path).returncode == 0
+
+
+def test_the_marker_only_exempts_its_own_line_and_the_one_above(tmp_path):
+    """An earlier version allowlisted fixture *values*, which meant any file
+    containing one was skipped. A marker three lines up must not exempt."""
+    (tmp_path / "far.py").write_text(
+        "# NOT-A-REAL-SECRET: fixture\n"
+        "filler = 1\n"
+        "more_filler = 2\n"
+        'DSN = "postgres" "ql://admin:s3cr3t@db.example.com/x"\n'.replace('" "', "")
+    )
+    assert _scan(tmp_path).returncode == 1
+
+
+def test_variable_references_are_not_credentials(tmp_path):
+    """`${VAR}` is indirection. Flagging it trains people to ignore the
+    scanner, which is how a real finding gets waved through."""
+    (tmp_path / "ci.yml").write_text(
+        "url: postgresql://${PGUSER}:${PGPASSWORD}@127.0.0.1:5432/db\n"
+        "other: postgresql://{{ secrets.U }}:{{ secrets.P }}@host/db\n"
+    )
+    assert _scan(tmp_path).returncode == 0

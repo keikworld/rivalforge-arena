@@ -376,33 +376,56 @@ class MemoryPlayerStore:
         self._players: dict[str, PlayerRecord] = {}
 
     def get_player(self, player_id: str) -> PlayerRecord | None:
-        return self._players.get(player_id)
+        from ..store.records import validate_player_id  # noqa: PLC0415
+
+        return self._players.get(validate_player_id(player_id))
 
     def upsert_player(self, record: PlayerRecord) -> PlayerRecord:
-        self._players[record.player_id] = record
-        return record
+        # The same validation the Postgres store applies. Two implementations
+        # of one port that enforce different rules is worse than one, because
+        # the difference only shows up in production.
+        from ..store.records import clean_player_record  # noqa: PLC0415
+
+        clean = clean_player_record(record)
+        self._players[clean.player_id] = clean
+        return clean
 
     def record_result(self, player_id: str, *, won: bool, points_delta: int) -> PlayerRecord:
-        current = self._players.get(player_id)
+        from ..security.validation import ValidationError, validate_int  # noqa: PLC0415
+        from ..store.records import MAX_POINTS_DELTA, validate_player_id  # noqa: PLC0415
+
+        checked_id = validate_player_id(player_id)
+        delta = validate_int(
+            points_delta, field="points_delta",
+            minimum=-MAX_POINTS_DELTA, maximum=MAX_POINTS_DELTA,
+        )
+        if not isinstance(won, bool):
+            raise ValidationError("won", f"expected a boolean, got {type(won).__name__}")
+
+        current = self._players.get(checked_id)
         if current is None:
-            raise KeyError(f"unknown player {player_id!r}")
+            raise KeyError(f"unknown player {checked_id!r}")
         updated = PlayerRecord(
             player_id=current.player_id,
             display_name=current.display_name,
             wallet=current.wallet,
-            points=max(0, current.points + points_delta),
+            points=max(0, current.points + delta),
             wins=current.wins + (1 if won else 0),
             losses=current.losses + (0 if won else 1),
             created_at=current.created_at,
             metadata=current.metadata,
         )
-        self._players[player_id] = updated
+        self._players[checked_id] = updated
         return updated
 
     def leaderboard(self, *, limit: int = 50) -> Sequence[PlayerRecord]:
+        from ..security.validation import ValidationError  # noqa: PLC0415
+
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            raise ValidationError("limit", f"expected an integer, got {type(limit).__name__}")
         return tuple(
             sorted(self._players.values(), key=lambda p: (-p.points, p.display_name))
-        )[:limit]
+        )[: max(1, min(limit, 500))]
 
 
 @NOTIFIERS.register("null")

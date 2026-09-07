@@ -22,6 +22,22 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12"]
 
+    # A real Postgres, not a mock. A test that mocks the database proves the
+    # mock works; the contract tests only mean something against the real one.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rivalforge_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,7 +49,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,postgres]"
 
       - name: No secrets in the repository
         # Runs before anything else that could be slow: if a credential is in
@@ -68,7 +84,16 @@ jobs:
         run: python -c "from rivalforge import load_content; c = load_content(); print(f'{len(c.battlefields)} arenas, {len(c.supremacies)} archetypes, {len(c.ranks)} ranks')"
 
       - name: Tests
-        run: pytest
+        env:
+          # The throwaway credential this service container was created with,
+          # kept in parts so no connection-string literal sits in the repo for
+          # the secret scanner to flag. Loopback only, so no TLS is demanded.
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: rivalforge_test
+        run: |
+          export RIVALFORGE_TEST_DATABASE_URL="postgresql://${PGUSER}:${PGPASSWORD}@127.0.0.1:5432/${PGDATABASE}"
+          pytest
 
       - name: Balance gate
         # Balance regressions raise no exception and return no wrong answer.

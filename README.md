@@ -148,7 +148,9 @@ Collapsing the last two is how a game bans its players during an RPC outage.
 | `RIVALFORGE_WALLET_FAILOVER` | — | comma-separated chain |
 | `RIVALFORGE_RPC_ENDPOINT` | public mainnet | any DAS-capable RPC |
 | `RIVALFORGE_RPC_API_KEY` | — | optional, raises rate limits |
-| `RIVALFORGE_PLAYER_STORE` | `memory` | where players persist |
+| `RIVALFORGE_PLAYER_STORE` | `memory` | `memory` or `postgres` |
+| `RIVALFORGE_DATABASE_URL` | — | Postgres DSN; `DATABASE_URL` is the fallback |
+| `RIVALFORGE_SESSION_FILE` | XDG state | where the file session store lives |
 
 Secrets come from the environment only — never a file in the repository, never
 a CLI argument (those are visible in `ps`), and never a log line: a redaction
@@ -170,4 +172,5 @@ filter is installed before anything can log.
 plugin layer, wallet verification, 325 unit tests, 5 live network tests, and a
 measured balance gate in CI.
 
-Phase 2 is persistence and a Telegram client. See the roadmap.
+Phase 2 has wallet authentication, ownership gating, an audit trail and
+Postgres persistence. A Telegram client is next. See the roadmap.
