@@ -1,0 +1,80 @@
+[
+  {
+    "id": "blazing_rift",
+    "name": "Blazing Rift",
+    "element": "fire",
+    "flavour": "A seam of open flame across black rock. The heat rewards those who carry it and punishes everyone else.",
+    "attunement_bonus": 1.15,
+    "hazard_chance": 0.2,
+    "hazard_effect": "burn",
+    "soul_cost": 2,
+    "soul_effect": "purge",
+    "soul_magnitude": 12,
+    "soul_name": "Plea to the Fire God"
+  },
+  {
+    "id": "tide_of_trials",
+    "name": "Tide of Trials",
+    "element": "water",
+    "flavour": "Cold water to the chest, rising and falling. Nothing here stays where you left it.",
+    "attunement_bonus": 1.15,
+    "hazard_chance": 0.1,
+    "hazard_effect": "chill",
+    "soul_cost": 2,
+    "soul_effect": "mend",
+    "soul_magnitude": 14,
+    "soul_name": "Plea to the Ocean Spirit"
+  },
+  {
+    "id": "whisperwind_arena",
+    "name": "Whisperwind Arena",
+    "element": "wind",
+    "flavour": "An open ring of standing stones. The wind carries every sound and hides every step.",
+    "attunement_bonus": 1.15,
+    "hazard_chance": 0.0,
+    "hazard_effect": null,
+    "soul_cost": 2,
+    "soul_effect": "veil",
+    "soul_magnitude": 65,
+    "soul_name": "Plea to the Wind Spirit"
+  },
+  {
+    "id": "tenebris_abyss",
+    "name": "Tenebris Abyss",
+    "element": "shadow",
+    "flavour": "No floor that anyone has found. Something down there is paying attention.",
+    "attunement_bonus": 1.2,
+    "hazard_chance": 0.14,
+    "hazard_effect": "chill",
+    "soul_cost": 2,
+    "soul_effect": "ruin",
+    "soul_magnitude": 18,
+    "soul_name": "Soul Tentacle"
+  },
+  {
+    "id": "chronos_cradle",
+    "name": "Chronos Cradle",
+    "element": "time",
+    "flavour": "A room that has already happened. Fighters here learn not to trust the last thing they remember.",
+    "attunement_bonus": 1.15,
+    "hazard_chance": 0.08,
+    "hazard_effect": "chill",
+    "soul_cost": 3,
+    "soul_effect": "rewind",
+    "soul_magnitude": 0,
+    "soul_name": "Plea to Chronos"
+  },
+  {
+    "id": "aurora_sanctum",
+    "name": "Aurora Sanctum",
+    "element": "light",
+    "flavour": "Vaulted ice lit from beneath. The Herald's own ground, and it forgives more than it should.",
+    "attunement_bonus": 1.15,
+    "hazard_chance": 0.06,
+    "hazard_effect": "burn",
+    "soul_cost": 2,
+    "soul_effect": "mend",
+    "soul_magnitude": 18,
+    "soul_name": "Plea to the Aurora"
+  }
+]

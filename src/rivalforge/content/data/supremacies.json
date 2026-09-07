@@ -1,0 +1,74 @@
+[
+  {
+    "id": "frostable_warrior",
+    "name": "Frostable Warriors",
+    "abbreviation": "FW",
+    "power_tier": 1,
+    "description": "Masters of resilience, Frostable Warriors win by still being standing.",
+    "strength": "High endurance and resistance to damage over time.",
+    "weakness": "Lower burst damage than any other supremacy.",
+    "power_bias": -3,
+    "guard_bias": 4,
+    "focus_bias": -1
+  },
+  {
+    "id": "keiknight_warrior",
+    "name": "Keiknight Warriors",
+    "abbreviation": "KW",
+    "power_tier": 2,
+    "description": "Versatile fighters who blend offence and defence without a glaring seam.",
+    "strength": "Effective attacking and defending, with no significant drawback.",
+    "weakness": "Predictable. Can be outmatched by a specialist.",
+    "power_bias": 1,
+    "guard_bias": 1,
+    "focus_bias": -2
+  },
+  {
+    "id": "keikdark_lord",
+    "name": "Keikdark Lords",
+    "abbreviation": "KL",
+    "power_tier": 3,
+    "description": "Masters of dark arts and soul manipulation. Fearsome and unpredictable.",
+    "strength": "Soul abilities come faster and cost less to reach.",
+    "weakness": "Takes increased damage from light. Volatile under pressure.",
+    "power_bias": 2,
+    "guard_bias": -4,
+    "focus_bias": 2
+  },
+  {
+    "id": "elemental_keik_master",
+    "name": "Elemental Keik Master",
+    "abbreviation": "EKM",
+    "power_tier": 4,
+    "description": "Commanders of a chosen element, at their most dangerous on home ground.",
+    "strength": "Draws more from elemental advantage than anyone else.",
+    "weakness": "Ordinary when the matchup is neutral.",
+    "power_bias": 3,
+    "guard_bias": -1,
+    "focus_bias": -2
+  },
+  {
+    "id": "soulfeast_overlord",
+    "name": "Soulfeast Keik Overlord",
+    "abbreviation": "SKO",
+    "power_tier": 5,
+    "description": "A terrifying thing that consumes souls to fuel its own dark power.",
+    "strength": "Devastating attacks that grow with every soul spent.",
+    "weakness": "Thin guard. Punishing to play badly.",
+    "power_bias": 5,
+    "guard_bias": -5,
+    "focus_bias": 0
+  },
+  {
+    "id": "divine_keiknity",
+    "name": "Divine Keiknities",
+    "abbreviation": "DK",
+    "power_tier": 6,
+    "description": "God-like beings who command a fundamental force of existence.",
+    "strength": "No weak stat. Reads the arena better than anything else alive.",
+    "weakness": "Rare enough that everyone has prepared for you.",
+    "power_bias": 2,
+    "guard_bias": 2,
+    "focus_bias": -4
+  }
+]

@@ -1,0 +1,87 @@
+name: CI
+
+# The previous codebase had no CI at all. A single "can every module be
+# imported?" check would have caught three of its nine audit findings, so that
+# check runs first here and the build fails on it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Every module must import
+        # The cheapest possible guard against the failure mode that made the
+        # previous codebase unrunnable: 248 of its 266 modules could not be
+        # imported, and nothing ever told anyone.
+        run: |
+          python - <<'PY'
+          import importlib, pkgutil, sys
+          import rivalforge
+          failed = []
+          for module in pkgutil.walk_packages(rivalforge.__path__, "rivalforge."):
+              try:
+                  importlib.import_module(module.name)
+              except Exception as exc:
+                  failed.append(f"{module.name}: {type(exc).__name__}: {exc}")
+          if failed:
+              print("modules that failed to import:")
+              for line in failed:
+                  print("  " + line)
+              sys.exit(1)
+          print("all modules import cleanly")
+          PY
+
+      - name: Content must load
+        # Content drift was silent for the life of the previous project. Here
+        # it is a build failure.
+        run: python -c "from rivalforge import load_content; c = load_content(); print(f'{len(c.battlefields)} arenas, {len(c.supremacies)} archetypes, {len(c.ranks)} ranks')"
+
+      - name: Tests
+        run: pytest
+
+      - name: Balance gate
+        # Balance regressions raise no exception and return no wrong answer.
+        # The only way to catch one is to measure.
+        run: python tools/balance_sweep.py --matches 60
+
+  integration:
+    # Needs the network, so it does not gate a pull request from a fork.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Live wallet checks
+        run: pytest -m integration
+        continue-on-error: true

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rivalforge"
+version = "0.1.0"
+description = "A sixty-second NFT duelling game."
+requires-python = ">=3.11"
+# The engine has no runtime dependencies, on purpose. Every dependency is
+# supply-chain surface, and a game whose core is pure stdlib can be audited in
+# an afternoon. Network and storage phases will add theirs behind extras.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "hypothesis>=6",
+]
+
+[project.scripts]
+rivalforge = "rivalforge.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"rivalforge.content" = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# -q keeps CI output readable; --strict-markers stops a typo'd marker silently
+# skipping a test, which is the quiet failure mode that hid bugs in the
+# previous codebase.
+addopts = "-q --strict-markers -m 'not integration'"
+markers = [
+  "integration: needs the network; run with `pytest -m integration`",
+]

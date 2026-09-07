@@ -1,0 +1,9 @@
+[
+  { "id": "unawakened",        "name": "Unawakened",        "points_required": 0,    "damage_modifier": 1.00 },
+  { "id": "warrior",           "name": "Warrior",           "points_required": 150,  "damage_modifier": 1.02 },
+  { "id": "knight",            "name": "Knight",            "points_required": 300,  "damage_modifier": 1.05 },
+  { "id": "lord",              "name": "Lord",              "points_required": 500,  "damage_modifier": 1.08 },
+  { "id": "elemental_master",  "name": "Elemental Master",  "points_required": 750,  "damage_modifier": 1.11 },
+  { "id": "soulfeast_overlord","name": "Soulfeast Overlord","points_required": 1000, "damage_modifier": 1.14 },
+  { "id": "divine_keiknity",   "name": "Divine Keiknity",   "points_required": 1500, "damage_modifier": 1.18 }
+]
