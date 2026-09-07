@@ -95,6 +95,13 @@ jobs:
           export RIVALFORGE_TEST_DATABASE_URL="postgresql://${PGUSER}:${PGPASSWORD}@127.0.0.1:5432/${PGDATABASE}"
           pytest
 
+      - name: Simulation gate
+        # A miniature campaign: several hundred fights, every phase, every
+        # invariant. Catches the class of bug a unit test cannot see -- a
+        # fight that cannot be finished, one player's wallet in another's
+        # chat, a forged button that moves a match.
+        run: python tools/simulate.py --players 25 --soak-steps 400 --threads 4
+
       - name: Balance gate
         # Balance regressions raise no exception and return no wrong answer.
         # The only way to catch one is to measure.

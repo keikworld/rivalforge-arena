@@ -27,3 +27,6 @@ sessions*.json
 *.pem
 *.keypair
 id_ed25519*
+
+# Simulation output. The committed report is the one in docs/; ad-hoc runs are not.
+sim-results/*.log

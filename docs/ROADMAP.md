@@ -48,6 +48,12 @@ opponent wins 67% against 41% for random.
 - [ ] Daily rotating arena, on the injected `Clock`.
 - [ ] Ladder and rank progression, already modelled and tested.
 - [x] Rate limiting on the chat surface, per user, checked before any work.
+- [x] **A full-cycle simulation.** A sandbox with real keypairs, a fake chain
+      that can fail, and a fake Telegram; seven phases covering the happy path,
+      nine ways a fight gets cut in half, forged and replayed input, chain
+      outages, simultaneous fights and a threaded concurrency run. Runs as a
+      campaign of thousands of independent simulations, with invariants checked
+      after every single action. See [`SIMULATION.md`](SIMULATION.md).
 - [ ] An audit log of match results.
 - [ ] Shared conversation state, so the bot can run more than one worker.
 

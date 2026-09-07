@@ -29,6 +29,7 @@ rivalforge features              # which features are on
 pytest                           # 681 tests
 pytest -m integration            # 5 more, against live mainnet
 python tools/balance_sweep.py    # the balance harness
+python tools/simulate.py         # a full-cycle simulation, all phases
 ```
 
 The engine has **no runtime dependencies**. Every dependency is supply-chain
@@ -167,6 +168,7 @@ filter is installed before anything can log.
 | [`docs/SECURITY.md`](docs/SECURITY.md) | threat model and controls |
 | [`docs/LESSONS_LEARNED.md`](docs/LESSONS_LEARNED.md) | what went wrong last time, and the rule each failure produced |
 | [`docs/TELEGRAM.md`](docs/TELEGRAM.md) | getting the bot running, and operating it |
+| [`docs/SIMULATION.md`](docs/SIMULATION.md) | the sandbox, the phases, and what each one proves |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | what ships next, and what has to be true first |
 
 ## Playing it in a chat

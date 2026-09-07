@@ -220,3 +220,27 @@ Control characters, bidi overrides and excess length are stripped **once**, at
 the boundary where an `OwnedNFT` becomes a `Fighter`. Escaping happens **once**,
 in the single function that produces a Telegram entity. Neither one is repeated
 anywhere, and each has one job.
+
+### 18. State that is correct for one actor is wrong for two
+
+The simulation harness was written to find concurrency bugs in the game. It
+found three in itself first, and all three were the same shape:
+
+* sends and edits were kept in two lists and tracked with **one cursor**, so
+  every new send shifted the positions and already-checked edits were
+  re-attributed to the wrong player -- and reported as forged buttons;
+* `last_text()` returned the newest entry in a **shared** log, which belongs to
+  whoever acted last. The connect flow read it and concluded that eleven of
+  twelve players never received a challenge;
+* that same field was **shared across threads** in the concurrency phase, so it
+  reported one player's board as another's outcome -- indistinguishable, from
+  the outside, from a rendering bug in the product.
+
+Each one produced a confident, specific, entirely false accusation against
+working code. The rule that came out of it: a harness has to be trustworthy
+before its findings are, so the harness gets tests that plant violations and
+assert it catches them. `TestTheGuardActuallyGuards` exists because a guard
+that cannot fail proves nothing.
+
+The second lesson is cheaper: when a value is "the current X", ask *whose* X.
+If the answer is "whoever asked last", it is a bug waiting for a second user.
