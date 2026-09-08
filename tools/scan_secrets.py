@@ -28,8 +28,15 @@ PATTERNS = [
     ("Stripe key",          re.compile(r"\bsk_(live|test)_[A-Za-z0-9]{20,}")),
     ("OpenAI key",          re.compile(r"\bsk-[A-Za-z0-9]{32,}")),
     ("Helius/UUID key",     re.compile(r"api[-_]?key\s*[:=]\s*[\"'][A-Za-z0-9\-]{16,}[\"']", re.I)),
+    # The key names whose *value* is always a credential. Kept in step with
+    # `_SECRET_KEYS` in security/redaction.py -- an earlier, shorter list read
+    # a real `.env.example` and flagged the Telegram token in it while walking
+    # straight past the Fernet ENCRYPTION_KEY on the next line.
     ("generic secret assign", re.compile(
-        r"(?i)\b(password|passwd|secret|token|api_key|apikey|private_key)\s*[:=]\s*[\"'][^\"']{8,}[\"']")),
+        r"(?i)\b(password|passwd|secret|secret_key|secretkey|token|access_token"
+        r"|refresh_token|api_key|apikey|private_key|privatekey|encryption_key"
+        r"|signing_key|seed_phrase|mnemonic|keypair|session_id"
+        r")\s*[:=]\s*[\"'][^\"']{8,}[\"']")),
     ("hex seed (64 chars)", re.compile(r"\"seed\"\s*:\s*\"[0-9a-f]{64}\"")),
     # A Telegram bot token. Whoever holds one *is* the bot: they can read
     # every message sent to it and post as it. There is no leading word
